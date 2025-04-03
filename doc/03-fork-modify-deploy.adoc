@@ -1,0 +1,83 @@
+= Instant Deployment: From GitHub Fork to Public Server in Minutes
+Rubén Pérez (@anarthal)
+
+Would you like to have your own running server?
+
+You can fork this repository, change the code you need and go live in minutes.
+We've created a GitHub actions workflow that will deploy your code to any
+SSH-accessible server. This document provides a guide on how to set up this
+continuous deployment workflow with an AWS EC2 virtual server.
+
+We chose AWS EC2 because it's quick and easy to set up. If you already have
+a server accessible via SSH, check out xref:bring-your-own-server[this section].
+
+== Creating an EC2 instance
+
+Let's first create an AWS EC2 instance (AWS's term for a virtual machine):
+
+. Create an https://aws.amazon.com/[AWS account], if you don't have one.
+. Create an SSH key pair so that our instance can be accessed via SSH. This
+  will be used by our GitHub Actions workflow:
+  - Navigate to the
+    https://console.aws.amazon.com/ec2/home#KeyPairs[key pairs page in the AWS EC2 console].
+  - Hit the "Create new key pair" button.
+  - Enter a name for the key (for example, "deployments-key"), then hit "Create key pair".
+  - AWS will create the key pair and let you download the private key. Save this
+    file to your computer and keep it safe - we will need it later.
+. Create an EC2 instance:
+  - Navigate to the
+    https://console.aws.amazon.com/ec2/home#Instances[instances page in the AWS EC2 console].
+  - Hit the "Launch instances" button.
+  - Under the "Key pair" panel, select the key pair we created in the previous
+    step (if you followed this guide, this should be "deployments-key"). This enables
+    SSH access into our server.
+  - Under "Network settings", check the "Allow HTTP traffic from the internet" checkbox.
+    This will allow our server to receive incoming HTTP requests.
+  - All other settings can be left as default. Hit the "Launch instance" button.
+  - Your server is ready! You should see a success message. Click on the instance
+    ID in the success message to see your server details, like its public IP address.
+    Don't close this tab, you will need these details in the following step.
+
+[#authorize-gha]
+== Authorizing GitHub to access your server
+
+The final step is to enter the SSH credentials we just generated into GitHub actions
+so the deployment script can use it. Follow these steps:
+
+. Create GitHub secrets in your repo with the SSH credentials:
+  - Navigate to your GitHub repository Settings. On the left menu,
+    select "Secrets and variables", then "Actions".
+  - Create a new repository secret named `SSH_PRIVATE_KEY`. Copy the contents
+    of the SSH private key you just downloaded from AWS as the secret's value, then hit "Add secret".
+  - Add another secret named `SSH_HOSTNAME`, with the server's public IP address
+    (or hostname) as value. If you've been following the AWS tutorial, this piece
+    of information is displayed in the https://console.aws.amazon.com/ec2/home#Instances[instances page].
+  - Add a last secret named `SSH_USERNAME` with the SSH username that GitHub Actions
+    should use. If you've been following the AWS tutorial, this is `ec2-user`.
+. Enable GitHub Actions for your repository:
+  - Navigate to the "Actions" tab of your GitHub repo.
+  - Click on the green button to enable them.
+. Your integration is ready! Make the changes you want, push them to the
+  `master` branch, and they will be deployed to AWS. You can check your deployment
+  status by checking the "Actions" tab of your GitHub repository.
+. Your site is live! You can type the public IP address of your machine into
+  your browser's URL bar to visit it.
+
+[#bring-your-own-server]
+== Bring your own server
+
+Do you already have a Linux server with SSH enabled? Then you can use it by
+skipping the EC2 instance creation, just following the
+xref:authorize-gha[GitHub Actions authorization] section.
+
+The https://github.com/anarthal/servertech-chat/blob/master/tools/deploy.sh[deployment script]
+relies on Docker. It will try to install it using `yum`, since this is what
+the default Amazon Linux images support. You may need to modify the Docker
+installation lines to match your server flavor. The rest of the script is
+distribution-agnostic. 
+
+== Stuck with deployments?
+
+We're also happy to provide help if you're stuck. Please
+https://github.com/anarthal/servertech-chat/issues/new[open an issue in the repository]
+or https://cpplang.slack.com/archives/C05MLSQGA01[contact us in Slack].

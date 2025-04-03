@@ -1,0 +1,27 @@
+#
+# Copyright (c) 2023 Ruben Perez Hidalgo (rubenperez038 at gmail dot com)
+#
+# Distributed under the Boost Software License, Version 1.0. (See accompanying
+# file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+#
+
+# This file is used during development and testing, not for production
+
+services:
+  cppserver:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      - REDIS_HOST=redis
+      - MYSQL_HOST=mysql
+    depends_on:
+      - redis
+      - mysql
+  redis:
+    image: "redis:alpine"
+    command: ["redis-server", "--appendonly", "yes"]
+  mysql:
+    image: "mysql:8.1.0"
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes

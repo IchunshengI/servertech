@@ -1,0 +1,4 @@
+websockets
+pytest
+pydantic
+requests

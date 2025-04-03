@@ -1,0 +1,6 @@
+.bodycontainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--boost-light-grey);
+}

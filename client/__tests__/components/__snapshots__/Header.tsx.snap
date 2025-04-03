@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Header renders the page header 1`] = `
+<DocumentFragment>
+  <div
+    class="flex m-3"
+  >
+    <img
+      alt="Boost logo"
+      data-nimg="1"
+      decoding="async"
+      height="60"
+      loading="lazy"
+      src="/_next/image?url=%2Fimg.jpg&w=128&q=75"
+      srcset="/_next/image?url=%2Fimg.jpg&w=64&q=75 1x, /_next/image?url=%2Fimg.jpg&w=128&q=75 2x"
+      style="color: transparent;"
+      width="60"
+    />
+    <div
+      class="flex-1 flex justify-end align-middle"
+    >
+      <div
+        class="flex flex-col justify-center pr-12 pl-12"
+      >
+        <a
+          class="no-underline text-2xl text-black"
+          href="https://github.com/anarthal/servertech-chat"
+        >
+          Source code
+        </a>
+      </div>
+      <div
+        class="flex flex-col justify-center pr-12 pl-12"
+      >
+        <a
+          class="no-underline text-2xl text-black"
+          href="https://anarthal.github.io/servertech-chat/"
+        >
+          Docs
+        </a>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
