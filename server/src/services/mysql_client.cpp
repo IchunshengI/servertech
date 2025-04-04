@@ -57,13 +57,12 @@ CREATE TABLE IF NOT EXISTS users (
 // https://github.com/anarthal/servertech-chat/issues/45
 static boost::mysql::handshake_params default_handshake_params() noexcept
 {
-    return {
-        "tlx",             // user
-        "hpcl6tlx",        // blank passwd
-        "servertech_chat",       // db
-    };
+    return boost::mysql::handshake_params(
+        "tlx",             // username
+        "hpcl6tlx",        // password
+        "servertech_chat"
+    );
 }
-
 // Returns the hostname to connect to. Defaults to localhost
 static std::string get_mysql_hostname()
 {
@@ -71,8 +70,9 @@ static std::string get_mysql_hostname()
     return host_c_str ? host_c_str : "localhost";
 }
 
-namespace {
 
+
+namespace {
 // Wraps a MySQL connection.
 // Closes the connection asynchronously when destroyed, using the provided yield context.
 class guarded_connection
@@ -133,6 +133,7 @@ class mysql_client_impl final : public mysql_client
 {
     boost::asio::any_io_executor ex_;
     std::string hostname_;
+    std::shared_ptr<mysql_pool> pool_;
 
     // Retrieves a usable MySQL connection.
     // This should be replaced by a connection pool when implementing
@@ -142,24 +143,62 @@ class mysql_client_impl final : public mysql_client
         const boost::mysql::handshake_params& hparams = default_handshake_params()
     )
     {
-        boost::asio::ip::tcp::resolver resolv(yield.get_executor());
-        boost::mysql::tcp_connection conn(yield.get_executor());
+        // boost::asio::ip::tcp::resolver resolv(yield.get_executor());
+        // boost::mysql::tcp_connection conn(yield.get_executor());
         boost::mysql::diagnostics diag;
-        error_code ec;
+        // error_code ec;
 
+        auto [ec,conn] = pool_->get_connection(yield);
         // Resolve hostname
-        auto entries = resolv.async_resolve(hostname_, boost::mysql::default_port_string, yield[ec]);
-        if (ec)
-            return error_with_message{ec};
-        assert(!entries.empty());
+        //auto entries = resolv.async_resolve(hostname_, boost::mysql::default_port_string, yield[ec]);
+        // if (ec)
+        //     return error_with_message{ec};
+        // assert(!entries.empty());
 
-        // Connect
-        conn.async_connect(*entries.begin(), hparams, diag, yield[ec]);
+        // // Connect
+        // conn.async_connect(*entries.begin(), hparams, diag, yield[ec]);
         if (ec)
             return error_with_message{ec, diag.server_message()};
 
         return guarded_connection(std::move(conn), yield);
     }
+
+    //     result_with_message<guarded_connection> get_connection(
+    //     boost::asio::yield_context yield,
+    //     const boost::mysql::handshake_params& hparams = default_handshake_params()
+    // )
+    // {
+    //      boost::asio::ip::tcp::resolver resolv(yield.get_executor());
+    //      boost::mysql::tcp_connection conn(yield.get_executor());
+    //     boost::mysql::diagnostics diag;
+    //      error_code ec;
+
+    //     //auto [ec,conn] = pool_->get_connection(yield);
+    //     //Resolve hostname
+    //     auto entries = resolv.async_resolve(hostname_, boost::mysql::default_port_string, yield[ec]);
+    //     if (ec)
+    //         return error_with_message{ec};
+    //     assert(!entries.empty());
+
+    //     // Connect
+    //     conn.async_connect(*entries.begin(), hparams, diag, yield[ec]);
+    //     if (ec)
+    //         return error_with_message{ec, diag.server_message()};
+
+    //     return guarded_connection(std::move(conn), yield);
+    // }
+
+    // result_with_message<guarded_connection> get_connection(boost::asio::yield_context yield,const boost::mysql::handshake_params& hparams = default_handshake_params()){
+        
+   
+    //     auto [ec, conn] = pool_->async_get_connection(yield);
+       
+    //     if (ec) {
+    //         return error_with_message{ec};
+    //     }
+    //     return guarded_connection(std::move(conn), yield);
+    
+    // }
 
     result_with_message<guarded_connection> get_connection_with_retries(
         boost::asio::yield_context yield,
@@ -197,6 +236,10 @@ class mysql_client_impl final : public mysql_client
 public:
     mysql_client_impl(boost::asio::any_io_executor ex) : ex_(std::move(ex)), hostname_(get_mysql_hostname())
     {
+    }
+
+    explicit mysql_client_impl(std::shared_ptr<mysql_pool> pool) : pool_(std::move(pool)){
+        pool_->init();
     }
 
     error_with_message setup_db(boost::asio::yield_context yield) final override
@@ -382,11 +425,38 @@ public:
             res.insert({std::get<0>(elm), std::move(std::get<1>(elm))});
         return res;
     }
+
 };
+
 
 }  // namespace
 
-std::unique_ptr<mysql_client> chat::create_mysql_client(boost::asio::any_io_executor ex)
-{
-    return std::unique_ptr<mysql_client>{new mysql_client_impl(std::move(ex))};
+// std::unique_ptr<mysql_client> chat::create_mysql_client(boost::asio::any_io_executor ex)
+// {
+//     return std::unique_ptr<mysql_client>{new mysql_client_impl(std::move(ex))};
+// }
+
+std::unique_ptr<mysql_client> chat::create_mysql_client(boost::asio::any_io_executor ex) {
+    // 连接池配置
+    mysql_pool::config cfg{
+        .max_idle_time = std::chrono::seconds(300),
+        .max_connections = 20,
+        .min_connections = 5
+    };
+
+    // MySQL 连接参数
+    auto params = default_handshake_params();
+    params.set_database("");
+    params.set_multi_queries(true);
+    // params.set_database("");
+    //params.set_multi_queries(true);
+    // 创建连接池
+    auto pool = std::make_shared<mysql_pool>(
+        ex,
+        get_mysql_hostname(), // 从环境变量获取主机名
+        std::move(params),
+        std::move(cfg)
+    );
+
+    return std::make_unique<mysql_client_impl>(std::move(pool));
 }

@@ -11,7 +11,7 @@ project(servertech_chat)
 # Boost.Context is required to run stackful coroutines
 # find_package(Boost REQUIRED COMPONENTS headers context json regex url)
 # Darren修改boost路径为/usr/local/lib，因为我们安装的boost是在该路径下
-find_package(Boost REQUIRED COMPONENTS headers context json regex url PATHS /usr/local/lib)
+find_package(Boost REQUIRED COMPONENTS headers context json regex url coroutine PATHS /usr/local/lib)
 #find_package(Boost REQUIRED COMPONENTS headers context json regex url)
  
 # OpenSSL is required by Boost.Redis
@@ -47,6 +47,7 @@ add_library(
     src/services/cookie_auth_service.cpp
     src/services/room_history_service.cpp
     src/services/pubsub_service.cpp
+    src/services/mysql_pool.cpp
 
     # API
     src/api/api_types.cpp
@@ -68,6 +69,7 @@ target_link_libraries(
     servertech_chat
     PUBLIC
     Boost::headers
+    Boost::coroutine
     Boost::context
     Boost::json
     Boost::regex

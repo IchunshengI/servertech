@@ -12,13 +12,17 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/core/span.hpp>
 #include <boost/variant2/variant.hpp>
-
+#include <boost/mysql.hpp>
 #include <memory>
 #include <string>
 #include <string_view>
-
+#include <boost/asio.hpp>
+#include <boost/asio/spawn.hpp>
+#include <deque>
+#include <mutex>
 #include "business_types.hpp"
 #include "error.hpp"
+#include "mysql_pool.hpp"
 
 // A high-level, specialized MySQL client. It implements the operations
 // required by our server, abstracting away the actual SQL operations.
@@ -77,7 +81,7 @@ public:
 
 // Creates a concrete implementation of mysql_client
 std::unique_ptr<mysql_client> create_mysql_client(boost::asio::any_io_executor ex);
-/* mysql连接池实例 */
+
 
 
 }  // namespace chat
