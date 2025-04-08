@@ -22,7 +22,7 @@ export default function PasswordInput<TFieldValues extends FieldValues>({
   return (
     <TextField
       variant="standard"
-      label="Password"
+      label="密码"
       required
       inputProps={{ maxLength: 100, "aria-label": "password" }}
       InputProps={{
@@ -36,11 +36,11 @@ export default function PasswordInput<TFieldValues extends FieldValues>({
       {...register(name, {
         required: {
           value: true,
-          message: "This field is required.",
+          message: "请填写信息.",
         },
         minLength: {
           value: minLength,
-          message: `Passwords should have at least ${minLength} characters.`,
+          message: `至少输入 ${minLength} 个字符.`,
         },
       })}
       error={!!errorMessage}

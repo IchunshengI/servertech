@@ -57,17 +57,64 @@ const LoginScreen = () => {
     [router, launch, setError],
   );
 
+  // return (
+  //   <>
+  //     <Head />
+
+  //     <div className="flex flex-col">
+  //       <Header />
+  //       <div
+  //         className={`${styles.bodycontainer} p-12 flex flex-col justify-center`}
+  //       >
+  //         <div className="flex justify-center">
+  //           <FormCard title="登录 -> 程序员老廖 聊天室">
+  //             <form
+  //               onSubmit={handleSubmit(onSubmit)}
+  //               className="flex-1 flex flex-col"
+  //             >
+  //               <EmailInput
+  //                 register={register}
+  //                 name="email"
+  //                 errorMessage={errors?.email?.message}
+  //                 className="flex-1 pb-2"
+  //               />
+  //               <PasswordInput
+  //                 register={register}
+  //                 name="password"
+  //                 errorMessage={errors?.password?.message}
+  //                 className="flex-1 pb-2 "
+  //               />
+  //               {errors.root && (
+  //                 <FormHelperText error>{errors.root.message}</FormHelperText>
+  //               )}
+  //               <div className="pt-8 flex justify-center">
+  //                 <Button variant="contained" type="submit" disabled={loading}>
+  //                   {loading ? "Logging in..." : "Log me in!"}
+  //                 </Button>
+  //               </div>
+  //               <div className="pt-8 flex justify-center">
+  //                 <p className="p-0 m-0 text-sm">
+  //                   Don&apos;t have an account? Go to{" "}
+  //                   <Link href="/">Create account</Link>
+  //                 </p>
+  //               </div>
+  //             </form>
+  //           </FormCard>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   </>
+  // );
   return (
     <>
       <Head />
 
       <div className="flex flex-col">
-        <Header />
         <div
           className={`${styles.bodycontainer} p-12 flex flex-col justify-center`}
         >
           <div className="flex justify-center">
-            <FormCard title="登录 -> 程序员老廖 聊天室">
+            <FormCard title="陆灵妖哔命理推理">
               <form
                 onSubmit={handleSubmit(onSubmit)}
                 className="flex-1 flex flex-col"
@@ -88,14 +135,14 @@ const LoginScreen = () => {
                   <FormHelperText error>{errors.root.message}</FormHelperText>
                 )}
                 <div className="pt-8 flex justify-center">
-                  <Button variant="contained" type="submit" disabled={loading}>
-                    {loading ? "Logging in..." : "Log me in!"}
+                  <Button variant="contained" type="submit" disabled={loading} aria-label="Log me in!">
+                    {loading ? "登陆中..." : "登陆!"}
                   </Button>
                 </div>
                 <div className="pt-8 flex justify-center">
                   <p className="p-0 m-0 text-sm">
-                    Don&apos;t have an account? Go to{" "}
-                    <Link href="/">Create account</Link>
+                    没有账号? 立即{" "}
+                    <Link href="/">注册</Link>
                   </p>
                 </div>
               </form>

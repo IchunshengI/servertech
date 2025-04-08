@@ -68,11 +68,68 @@ export default function HomePage() {
     [router, setError, launch],
   );
 
+  // return (
+  //   <>
+  //     <Head />
+  //     <div className="flex flex-col">
+  //       <Header />
+  //       <div className={`${styles.bodycontainer} p-12`}>
+  //         <div className="text-center pb-8">
+  //           <p className="text-3xl p-3 m-0">欢迎来到</p>
+  //           <p className="text-6xl p-3 m-0">💬 陆灵妖哔命理推理服务平台 💬</p>
+  //           <p className="text-xl p-3 m-0">
+  //             一款专属于潮汕人的命理大模型
+  //           </p>
+  //         </div>
+  //         <div className="flex justify-center">
+  //           <FormCard title="五行之道，就在其中">
+  //             <form
+  //               className="flex-1 flex flex-col"
+  //               onSubmit={handleSubmit(onSubmit)}
+  //             >
+  //               <EmailInput
+  //                 register={register}
+  //                 name="email"
+  //                 errorMessage={errors?.email?.message}
+  //                 className="flex-1 pb-2"
+  //               />
+  //               <PasswordInput
+  //                 register={register}
+  //                 name="password"
+  //                 errorMessage={errors?.password?.message}
+  //                 className="flex-1 pb-2"
+  //               />
+  //               <UsernameInput
+  //                 register={register}
+  //                 name="username"
+  //                 errorMessage={errors?.username?.message}
+  //                 className="flex-1 pb-2"
+  //               />
+  //               {errors.root && (
+  //                 <FormHelperText error>{errors.root.message}</FormHelperText>
+  //               )}
+  //               <div className="pt-8 flex justify-center">
+  //                 <Button variant="contained" type="submit" disabled={loading}>
+  //                   {loading ? "Creating account..." : "Create my account"}
+  //                 </Button>
+  //               </div>
+  //               <div className="pt-8 flex justify-center">
+  //                 <p className="p-0 m-0 text-sm">
+  //                   Already have an account? Go to{" "}
+  //                   <Link href="/login">Sign In</Link>
+  //                 </p>
+  //               </div>
+  //             </form>
+  //           </FormCard>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   </>
+  // );
   return (
     <>
       <Head />
       <div className="flex flex-col">
-        <Header />
         <div className={`${styles.bodycontainer} p-12`}>
           <div className="text-center pb-8">
             <p className="text-3xl p-3 m-0">欢迎来到</p>
@@ -109,14 +166,14 @@ export default function HomePage() {
                   <FormHelperText error>{errors.root.message}</FormHelperText>
                 )}
                 <div className="pt-8 flex justify-center">
-                  <Button variant="contained" type="submit" disabled={loading}>
-                    {loading ? "Creating account..." : "Create my account"}
+                  <Button variant="contained" type="submit" disabled={loading} aria-label="Create my account">
+                    {loading ? "注册账号中..." : "注册账号"}
                   </Button>
                 </div>
                 <div className="pt-8 flex justify-center">
                   <p className="p-0 m-0 text-sm">
-                    Already have an account? Go to{" "}
-                    <Link href="/login">Sign In</Link>
+                    已有账户? 立即{" "}
+                    <Link href="/login">登陆</Link>
                   </p>
                 </div>
               </form>

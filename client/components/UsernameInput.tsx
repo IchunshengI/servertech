@@ -17,17 +17,17 @@ export default function UsernameInput<TFieldValues extends FieldValues>({
   return (
     <TextField
       variant="standard"
-      label="Username (public)"
+      label="用户名"
       required
       inputProps={{ maxLength: 100, "aria-label": "username" }}
       {...register(name, {
         required: {
           value: true,
-          message: "This field is required.",
+          message: "必填信息.",
         },
         minLength: {
           value: minLength,
-          message: `Usernames should have at least ${minLength} characters.`,
+          message: `用户名至少为 ${minLength} 个字符.`,
         },
       })}
       error={!!errorMessage}

@@ -129,7 +129,7 @@ result<std::string_view> websocket::read(boost::asio::yield_context yield)
     {
         auto guard = impl_->lock_reads();
         impl_->read_buffer.clear();
-        impl_->ws.async_read(impl_->read_buffer, yield[ec]);
+        impl_->ws.async_read(impl_->read_buffer, yield[ec]); /* 异步读 */
     }
 
     // Check the result

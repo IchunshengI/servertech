@@ -74,7 +74,7 @@ describe("CreateAccountPage page", () => {
 
     // Fill in the form and hit submit
     await user.type(screen.getByLabelText("email"), email);
-    await user.type(screen.getByLabelText("password"), password);
+    await user.type(screen.getByLabelText("密码"), password);
     await user.type(screen.getByLabelText("username"), username);
     await user.click(screen.getByText("Create my account"));
 

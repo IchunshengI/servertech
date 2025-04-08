@@ -329,12 +329,27 @@ export default function ChatPage() {
   const currentRoom = state.rooms[state.currentRoomId] || null;
   const rooms = Object.values(state.rooms);
   sortRoomsByLastMessageInplace(rooms);
+ 
+  // return (
+  //   <>
+  //     <Head />
+  //     <div className="flex flex-col h-full">
+  //       // <Header />
+  //       <ChatScreen
+  //         rooms={rooms}
+  //         currentRoom={currentRoom}
+  //         currentUserId={state.currentUser.id}
+  //         onClickRoom={onClickRoom}
+  //         onMessage={onMessageTyped}
+  //       />
+  //     </div>
+  //   </>
+  // );
 
-  return (
+    return (
     <>
       <Head />
       <div className="flex flex-col h-full">
-        <Header />
         <ChatScreen
           rooms={rooms}
           currentRoom={currentRoom}
