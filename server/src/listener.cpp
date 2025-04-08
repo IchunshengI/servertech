@@ -78,7 +78,7 @@ error_code chat::launch_http_listener(
     error_code ec;
 
     // An object that allows us to acept incoming TCP connections
-    boost::asio::ip::tcp::acceptor acceptor{ex};
+    boost::asio::ip::tcp::acceptor acceptor{ex}; /* 这里是一样的，这个执行器 */
 
     // Open the acceptor
     acceptor.open(listening_endpoint.protocol(), ec);

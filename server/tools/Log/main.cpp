@@ -24,7 +24,9 @@ void timer_callback(chat::LogPersister& persister,
     persister.read();
 }
 
-
+int a = 5;
+#include <vector>
+std::vector<std::vector<int>> g{{2,3},{2,2}};
 int main()
 {
 
@@ -35,7 +37,7 @@ int main()
     timer_callback(persister, timer);
 //    chat::LogPersister persister(&imp_log, path, log_size);
     LOG("DEBUG") << "Thread message ";
-    //persister.read();
+    //persister.read();7
     LOG("DEBUG") << "HHHH1 ";
     //persister.read();
     LOG("DEBUG") << "HHHH2 ";

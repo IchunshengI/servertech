@@ -22,3 +22,5 @@ server/build/
 server/cscope*
 .clang-format
 .vscode-ctags
+server/tools/Log/*.log
+server/tools/rpc/build
