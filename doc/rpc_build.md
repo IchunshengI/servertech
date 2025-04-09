@@ -1,5 +1,5 @@
 # 编译说明
-rpc部分使用的是此[开源项目](https://github.com/attackoncs/rpc/tree/main#)实现
+rpc部分学习参考使用的是此[开源项目](https://github.com/attackoncs/rpc/tree/main#)实现
 
 编译的前提是已根据聊天室安装好了对应的boost
 
