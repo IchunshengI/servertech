@@ -5,6 +5,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
   parseWebsocketMessage,
   serializeMessagesEvent,
+  serializeExitEvent,
 } from "@/lib/apiSerialization";
 import { ServerMessage, Room, User } from "@/lib/apiTypes";
 import { MyMessage, OtherUserMessage } from "@/components/Message";
@@ -205,7 +206,7 @@ export const ChatScreen = ({
             id={id}
             name={name}
             selected={id === currentRoom.id}
-            lastMessage={messages[0]?.content || "No messages yet"}
+            lastMessage={messages[0]?.content || "无历史消息"}
             onClick={onClickRoom}
           />
         ))}
@@ -217,7 +218,7 @@ export const ChatScreen = ({
           ref={messagesRef}
         >
           {currentRoomMessages.length === 0 ? (
-            <p>No more messages to show</p>
+            <p>暂时没有历史消息</p>
           ) : (
             currentRoomMessages.map((msg) => (
               <Message
@@ -322,6 +323,17 @@ export default function ChatPage() {
     };
   }, [onWebsocketMessage, onClose]);
 
+    // 退出登录处理
+    const handleLogout = useCallback(() => {
+      // 发送退出消息
+    if (websocketRef.current?.readyState === WebSocket.OPEN) {
+      const exitEvt = serializeExitEvent();
+      websocketRef.current.send(exitEvt);
+    }
+      websocketRef.current?.close();
+      clearHasAuth();
+      router.push('/login');
+    }, [router]);
   // Handle loading state
   if (state.loading) return <p>Loading...</p>;
 
@@ -329,27 +341,20 @@ export default function ChatPage() {
   const currentRoom = state.rooms[state.currentRoomId] || null;
   const rooms = Object.values(state.rooms);
   sortRoomsByLastMessageInplace(rooms);
- 
-  // return (
-  //   <>
-  //     <Head />
-  //     <div className="flex flex-col h-full">
-  //       // <Header />
-  //       <ChatScreen
-  //         rooms={rooms}
-  //         currentRoom={currentRoom}
-  //         currentUserId={state.currentUser.id}
-  //         onClickRoom={onClickRoom}
-  //         onMessage={onMessageTyped}
-  //       />
-  //     </div>
-  //   </>
-  // );
+  
 
-    return (
+  return (
     <>
       <Head />
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full relative"> {/* 添加relative定位 */}
+        {/* 退出按钮 */}
+        <button
+          onClick={handleLogout}
+          className="absolute top-4 right-4 z-50 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md shadow-sm transition-colors"
+        >
+          退出登录
+        </button>
+        
         <ChatScreen
           rooms={rooms}
           currentRoom={currentRoom}

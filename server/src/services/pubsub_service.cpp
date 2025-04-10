@@ -24,6 +24,7 @@ using namespace chat;
 
 namespace {
 
+/* 发布订阅模式的具体实现类 */
 class pubsub_service_impl final : public pubsub_service
 {
     // The type of elements held by our container
@@ -67,7 +68,8 @@ public:
         boost::span<const std::string_view> topic_ids
     ) override final
     {
-        // Create a subscription for each requested topic
+        // Create a subscription for each requested topic 
+        /* 初始化的时候会传入订阅参数 */
         for (auto topic_id : topic_ids)
         {
             ct_.insert(subscription{std::string(topic_id), subscriber});

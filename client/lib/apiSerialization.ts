@@ -24,3 +24,11 @@ export function serializeMessagesEvent(
   };
   return JSON.stringify(evt);
 }
+
+
+export function serializeExitEvent() {
+  return JSON.stringify({
+    type: "clientExit",
+    payload: {}
+  });
+}

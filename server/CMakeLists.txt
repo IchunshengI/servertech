@@ -102,8 +102,8 @@ target_precompile_headers(
 )
 
 # The actual server executable
-add_executable(main src/main.cpp)
-target_link_libraries(main PRIVATE servertech_chat)
+add_executable(server-chat src/main.cpp)
+target_link_libraries(server-chat PRIVATE servertech_chat)
 
 # Testing
 include(CTest)
