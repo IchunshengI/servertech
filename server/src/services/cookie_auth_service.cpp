@@ -42,8 +42,10 @@ result_with_message<std::string> cookie_auth_service::generate_session_cookie(
 }
 
 
+
+
 /* 从消息中抽取中用于id */
-result_with_message<std::int64_t> cookie_auth_service::user_id_from_cookie(
+result_with_message<std::pair<std::int64_t,std::string_view>> cookie_auth_service::user_id_from_cookie(
     const boost::beast::http::fields& req,
     boost::asio::yield_context yield
 )
@@ -67,22 +69,29 @@ result_with_message<std::int64_t> cookie_auth_service::user_id_from_cookie(
     if (result.has_error())
     {
         auto err = std::move(result).error();
-        if (err.ec == errc::not_found)
-            CHAT_RETURN_ERROR_WITH_MESSAGE(errc::requires_auth, std::move(err.msg))
+        if (err.ec == errc::not_found){
+            CHAT_RETURN_ERROR_WITH_MESSAGE(errc::requires_auth, std::move(err.msg));
+            // std::cout << "not found" << std::endl;
+            // return error_with_message{errc::requires_auth, std::move(err.msg)};
+        }
         else
             return err;
     }
     std::cout << __FUNCTION__ << " user_id from reids result.value: " << result.value() << std::endl;
-    return result.value();
+    // std::int64_t user_id = result.value();
+    // std::string_view session_value = cookie_it->value;
+    return std::make_pair(result.value(),cookie_it->value);
 }
 
-result_with_message<user> cookie_auth_service::user_from_cookie(
+result_with_message<std::pair<result_with_message<user>,std::string_view>> cookie_auth_service::user_from_cookie(
     const boost::beast::http::fields& req_headers,
     boost::asio::yield_context yield
 )
 {
     auto user_id_result = user_id_from_cookie(req_headers, yield);  //通过cookie获取user_id
     if (user_id_result.has_error())
+    {
         return std::move(user_id_result).error();
-    return mysql_->get_user_by_id(*user_id_result, yield);          //然后通过user_id从MySQL中查询用户名
+    }
+    return std::make_pair(mysql_->get_user_by_id(user_id_result.value().first, yield), user_id_result->second);          //然后通过user_id从MySQL中查询用户名
 }

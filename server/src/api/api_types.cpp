@@ -134,6 +134,7 @@ chat::any_client_event chat::parse_client_event(std::string_view from)
 
     std::cout << __FUNCTION__ << ": type=" << type  << std::endl;
     // Parse the message, depending on its type
+
     if (type == "clientMessages")
     {
         // Parse the payload
@@ -149,6 +150,9 @@ chat::any_client_event chat::parse_client_event(std::string_view from)
         if (parsed_payload.has_error())
             CHAT_RETURN_ERROR(parsed_payload.error())
         return parsed_payload.value();
+    }else if(type == "clientExit"){
+         //std::cout << "clientExit" << std::endl;
+         return client_exit_event{};
     }
     else
     {

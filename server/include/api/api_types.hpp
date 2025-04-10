@@ -85,12 +85,15 @@ struct request_room_history_event
     std::string firstMessageId;
 };
 
+// 表示客户端主动退出的事件（不需要携带额外数据）
+struct client_exit_event {};
 // A variant that can represent any event that may be received from the client,
 // or an error_code, if the client sent an invalid message
 using any_client_event = boost::variant2::variant<
     error_code,  // Invalid, used to report errors
     client_messages_event,
-    request_room_history_event>;
+    request_room_history_event,
+    client_exit_event>;
 
 // Parses a message received from the websocket client into a variant
 // holding any of the valid client-side events.

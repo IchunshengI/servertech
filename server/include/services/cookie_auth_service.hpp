@@ -49,7 +49,7 @@ public:
     // Returns errc::auth_required if the cookie is not present, invalid,
     // or doesn't match any valid session ID.
     /* 验证用户是否能通过cookie授权通过 */
-    result_with_message<std::int64_t> user_id_from_cookie(
+    result_with_message<std::pair<std::int64_t,std::string_view>> user_id_from_cookie(
         const boost::beast::http::fields& req_headers,
         boost::asio::yield_context yield
     );
@@ -57,7 +57,7 @@ public:
     // Verifies that the user is authenticated via a cookie, returning the associated user.
     // Works like user_id_from_cookie, but also looks up the user in MySQL.
     /* 返回关联的用户 */
-    result_with_message<user> user_from_cookie(
+    result_with_message<std::pair<result_with_message<user>,std::string_view>> user_from_cookie(
         const boost::beast::http::fields& req_headers,
         boost::asio::yield_context yield
     );

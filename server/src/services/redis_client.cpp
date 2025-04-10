@@ -100,7 +100,7 @@ public:
         // auto-assigns it an ID.
         boost::redis::request req;
         for (const auto& msg : messages)
-            req.push("XADD", room_id, "*", "payload", serialize_redis_message(msg));
+            req.push("XADD", room_id, "*", "payload", serialize_redis_message(msg)); /* 流不存在时redis会自动创建 */
 
         // Execute it
         boost::redis::generic_response res;
@@ -169,8 +169,38 @@ public:
         // Check whether the key was present
         if (opt.has_value())
             return opt.value();
-        else
+        else{
+           // std::cout << "not found get_int_key" <<std::endl;
             return error_with_message{errc::not_found};
+        }
+    }
+
+    error_with_message delete_key(
+        std::string_view key,
+        boost::asio::yield_context yield
+    ) final override
+    {
+        /* 构造redis DEL命令 */
+        boost::redis::request req;
+        req.push("DEL", key);
+
+        /* 执行命令 */
+        boost::redis::response<int64_t> res;    /* DEL命令返回的删除的键数量 */
+        error_code ec;
+        conn_.async_exec(req, res, yield[ec]);
+
+        if(ec){
+            return error_with_message{ec};
+        }
+
+        auto& result = std::get<0>(res);
+        if(result.has_error())
+            CHAT_RETURN_ERROR_WITH_MESSAGE(errc::redis_command_failed, std::move(result).error().diagnostic);
+
+        if(result.value() == 0)
+            return error_with_message{errc::not_found};
+        else
+            return error_with_message{};
     }
 };
 

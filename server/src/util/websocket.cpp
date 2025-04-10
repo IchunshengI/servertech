@@ -147,11 +147,12 @@ result<std::string_view> websocket::read(boost::asio::yield_context yield)
 
 error_code websocket::write_locked_impl(std::string_view buff, boost::asio::yield_context yield)
 {
-    assert(impl_->write_mtx_.locked());
+    assert(impl_->write_mtx_.locked()); /* 互斥访问，确保其他线程拿不到当前的这个websocket */
 
     error_code ec;
 
     // Perform the write
+    /* 异步写入 */
     impl_->ws.async_write(boost::asio::buffer(buff), yield[ec]);
 
     // Log it
@@ -163,7 +164,7 @@ error_code websocket::write_locked_impl(std::string_view buff, boost::asio::yiel
 error_code websocket::write(std::string_view message, boost::asio::yield_context yield)
 {
     // Wait for the connection to become iddle
-    auto guard = lock_writes(yield);
+    auto guard = lock_writes(yield); /* 获取锁 */
 
     // Write
     return write_locked(message, guard, yield);

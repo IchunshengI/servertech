@@ -42,7 +42,7 @@ static http::message_generator handle_http_request_impl(
     shared_state& st,
     boost::asio::yield_context yield
 )
-{
+{   /* 手动解析http的部分 */
     // Attempt to parse the request target
     auto ec = ctx.parse_request_target();
     if (ec)
@@ -134,7 +134,7 @@ void chat::run_http_session(
         stream.expires_after(std::chrono::seconds(30));
 
         // Read a request
-        http::async_read(stream, buff, parser.get(), yield[ec]);    //读取socket数据
+        http::async_read(stream, buff, parser.get(), yield[ec]);    //读取socket数据 已经封装好了的http数据解析
 
         if (ec == http::error::end_of_stream)
         {

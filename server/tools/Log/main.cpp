@@ -1,41 +1,28 @@
-#include "Logger.h"
-#include "LogStream.h"
+
 #include <iostream>
-#include "LogPersister.h"
-#define LOG(level) chat::Logger::instance()(level)
 
-std::string path = "/home/tlx/project/servertech-chat/server/tools/Log/";
-size_t log_size = 1024*1024*10;
-chat::Logger& imp_log = chat::Logger::instance();
-
+//#define LOG(level) chat::Logger::instance()(level)
 #include <boost/asio.hpp>
 
-namespace asio = boost::asio;
+#include "LoggerWrapper.h"
+
+boost::asio::io_context io_context;
 
 
-void timer_callback(chat::LogPersister& persister, 
-                   asio::steady_timer& timer) {
-    timer.expires_after(std::chrono::seconds(1));
-    timer.async_wait([&](const boost::system::error_code& ec) {
-        if (!ec) {
-            timer_callback(persister, timer);
-        }
-    });
-    persister.read();
-}
 
-int a = 5;
-#include <vector>
-std::vector<std::vector<int>> g{{2,3},{2,2}};
+
 int main()
 {
+    // 注册信号处理（Ctrl+C）
 
-    asio::io_context io_context;
-    chat::LogPersister persister(&imp_log, path, log_size);
+    chat::InitLogger(
+        io_context, 
+        1,                          // time (秒)
+        "/home/tlx/project/servertech-chat/server/tools/Log/",   // 日志路径
+        10 * 1024 * 1024,           // 日志文件大小 (10MB)
+        8192                        // 缓冲区大小 (默认)
+    );
 
-    asio::steady_timer timer(io_context);
-    timer_callback(persister, timer);
-//    chat::LogPersister persister(&imp_log, path, log_size);
     LOG("DEBUG") << "Thread message ";
     //persister.read();7
     LOG("DEBUG") << "HHHH1 ";
@@ -49,11 +36,6 @@ int main()
     LOG("DEBUG") << "HHHH1 ";
     LOG("DEBUG") << "HHHH2 ";
     io_context.run();
-    //persister.read();
-
-    /* 这里要安排一个类，把里面的数据都给读出来先 */
     
-   // persister.read();
-    //std::FILE* file;
     return 0;
 }

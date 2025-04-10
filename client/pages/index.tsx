@@ -135,7 +135,7 @@ export default function HomePage() {
             <p className="text-3xl p-3 m-0">欢迎来到</p>
             <p className="text-6xl p-3 m-0">💬 陆灵妖哔命理推理服务平台 💬</p>
             <p className="text-xl p-3 m-0">
-              一款专属于潮汕人的命理大模型
+              一款专属于♥你♥的命理服务
             </p>
           </div>
           <div className="flex justify-center">

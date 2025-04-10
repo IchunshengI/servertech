@@ -1,7 +1,7 @@
-#include "Logger.h"
+#include "log/logger.h"
 #include <iostream>
-#include "LogStream.h"
-#include "LogPersister.h"
+#include "log/log_stream.h"
+#include "log/log_persister.h"
 
 namespace chat{
 

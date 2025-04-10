@@ -83,6 +83,11 @@ public:
         std::string_view key,
         boost::asio::yield_context yield
     ) = 0;
+
+    virtual error_with_message delete_key(
+        std::string_view, 
+        boost::asio::yield_context yield
+    ) = 0;
 };
 
 // Creates a concrete implementation of redis_client

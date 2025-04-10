@@ -55,12 +55,12 @@ result_with_message<std::string> session_store::generate_session_id(
 )
 {
     // Convert the user ID to string
-    auto user_id_str = std::to_string(user_id);
+    auto user_id_str = std::to_string(user_id); /* 这个是mysql中的用户id来着 */
 
     while (true)
     {
         // Generate an identifier
-        auto id = generate_identifier();
+        auto id = generate_identifier(); /* 生成随机会话id */
         auto redis_key = get_redis_key(id);
 
         // Try to insert it

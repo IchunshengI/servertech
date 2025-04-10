@@ -61,6 +61,12 @@ add_library(
     src/request_context.cpp
     src/shared_state.cpp
     src/error.cpp
+
+    # Log 
+    src/log/logger.cpp
+    src/log/logger_wrapper.cpp
+    src/log/log_stream.cpp
+    src/log/log_persister.cpp
 )
 
 target_include_directories(servertech_chat PUBLIC include)
@@ -102,8 +108,8 @@ target_precompile_headers(
 )
 
 # The actual server executable
-add_executable(main src/main.cpp)
-target_link_libraries(main PRIVATE servertech_chat)
+add_executable(server-chat src/main.cpp)
+target_link_libraries(server-chat PRIVATE servertech_chat)
 
 # Testing
 include(CTest)

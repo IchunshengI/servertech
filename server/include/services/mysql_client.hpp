@@ -22,7 +22,7 @@
 #include <mutex>
 #include "business_types.hpp"
 #include "error.hpp"
-#include "mysql_pool.hpp"
+
 
 // A high-level, specialized MySQL client. It implements the operations
 // required by our server, abstracting away the actual SQL operations.

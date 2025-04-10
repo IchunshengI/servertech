@@ -28,24 +28,38 @@
 #include "services/room_history_service.hpp"
 #include "shared_state.hpp"
 #include "util/websocket.hpp"
-
+#include <boost/beast/websocket/error.hpp>
 using namespace chat;
 
 namespace {
 
+
+ 
 // Rooms are static for now.
-static constexpr std::array<std::string_view, 4> room_ids{
-    "beast",
-    "async",
-    "db",
-    "wasm",
+// static constexpr std::array<std::string_view, 4> room_ids{
+//     "beast",
+//     "async",
+//     "db",
+//     "wasm",
+// };
+
+// static constexpr std::array<std::string_view, room_ids.size()> room_names{
+//     "程序员老廖",
+//     "Boost.Async",
+//     "Database connectors",
+//     "Web assembly",
+// };
+
+
+// Rooms are static for now.
+static constexpr std::array<std::string_view, 2> room_ids{
+    "test_channe1",
+    "test_channe2",
 };
 
 static constexpr std::array<std::string_view, room_ids.size()> room_names{
-    "程序员老廖",
-    "Boost.Async",
-    "Database connectors",
-    "Web assembly",
+    "内测频道1",
+    "内测频道2",
 };
 
 // An owning type containing data for the hello event.
@@ -122,7 +136,7 @@ struct event_handler_visitor
         server_messages_event server_evt{evt.roomId, current_user, msgs};   //封装消息
 
         // Broadcast the event to all clients
-        // ? 这里的广播是怎么回事？
+        // ? 这里的广播是怎么回事？ 发布-订阅者模式？
         st.pubsub().publish(evt.roomId, server_evt.to_json());  //发送给所有的客户端
         return {};
     }
@@ -145,6 +159,29 @@ struct event_handler_visitor
         ws.write(payload, yield[ec]);
         return {ec};
     }
+
+    error_with_message operator()(const client_exit_event& evt) const // 1. 参数改为 const 引用
+    {
+        boost::system::error_code ec;
+        
+        // 主动关闭 WebSocket 连接 (使用结构体成员变量名 ws 和 yield)
+        ws.close(boost::beast::websocket::close_code::normal, yield[ec]); // 2. 修正变量名为 ws 和 yield
+        if (ec)
+        {
+            // 使用 error_with_message 返回错误 (保持与其它函数相同的返回类型)
+            return error_with_message{ec, "Failed to close WebSocket"};
+        }
+
+        /* 这里要删除对应的cookie哦 */
+
+
+        // 返回特定错误码表示客户端主动退出 (使用现有错误码类型)
+        return error_with_message{
+            boost::beast::websocket::error::closed, // 错误码
+            "Client exited normally"                // 消息
+        };
+    }
+
 };
 
 // Messages are broadcast between sessions using the pubsub_service.
@@ -156,10 +193,10 @@ class chat_websocket_session final : public message_subscriber,
 {
     websocket ws_;
     std::shared_ptr<shared_state> st_;
-
+    std::string_view cookie_; /* 当前会话存放的cookie信息 */
 public:
     chat_websocket_session(websocket socket, std::shared_ptr<shared_state> state) noexcept
-        : ws_(std::move(socket)), st_(std::move(state))
+        : ws_(std::move(socket)), st_(std::move(state)), cookie_()
     {
     }
 
@@ -169,13 +206,22 @@ public:
         ws_.write(serialized_message, yield);
     }
 
+    /* 
+        每个客户端在服务器都有这个一个对应的session，每个session都有一个对应的协程
+    */
     // Runs the session until completion
-    error_with_message run(boost::asio::yield_context yield)    //每个客户端在服务器都有这个一个对应的session，每个session都有一个对应的协程
+    error_with_message run(boost::asio::yield_context yield)
     {
         error_code ec;
 
         // Check that the user is authenticated
-        auto user_result = st_->cookie_auth().user_from_cookie(ws_.upgrade_request(), yield);   //读取cookie中的用户信息
+        auto result = st_->cookie_auth().user_from_cookie(ws_.upgrade_request(), yield);   //读取cookie中的用户信息
+        if(result.has_error()){
+            ws_.close(boost::beast::websocket::policy_error, yield);
+            return result.error();
+        }
+        auto user_result = result->first;
+        auto user_cookie = result->second;
         if (user_result.has_error())
         {
             // If it's not, close the websocket. This is the preferred approach
@@ -194,7 +240,7 @@ public:
         // Subscribe to messages for the available rooms
         auto pubsub_guard = st_->pubsub().subscribe_guarded(shared_from_this(), room_ids);
 
-        // Retrieve the data required for the hello message
+        // Retrieve the data required for the hello message  Hello消息其实也就是房间的历史消息
         auto hello_data = get_hello_data(*st_, yield);  //获取房间的历史消息
         if (hello_data.has_error())
             return hello_data.error();
@@ -219,12 +265,26 @@ public:
                 return {raw_msg.error()};
 
             // Deserialize it   解析json数据
+            /* 这里其实就可以丢给线程池来做了 */
             auto msg = chat::parse_client_event(raw_msg.value());  // 2. 通过解析json数据解析客户端发送的消息
 
             // Dispatch
             auto err = boost::variant2::visit(event_handler_visitor{current_user, ws_, *st_, yield}, msg); // 处理客户端发送的消息
-            if (err.ec)
+            if (err.ec){
+                if(err.ec == boost::beast::websocket::error::closed){
+                    /* 删除对应的缓存哩 */
+                    constexpr std::string_view prefix = "session_";
+                    std::string res;
+                    res.reserve(prefix.size() + user_cookie.size());
+                    res += prefix;
+                    res += user_cookie;
+                    auto err_ = st_->redis().delete_key(res, yield);
+                    if(err_.ec){
+                        return err_;
+                    }
+                }
                 return err;
+            }
         }
     }
 };

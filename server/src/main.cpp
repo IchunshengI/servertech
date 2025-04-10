@@ -16,7 +16,7 @@
 #include "listener.hpp"
 #include "services/redis_client.hpp"
 #include "shared_state.hpp"
-
+#include "log/logger_wrapper.h"
 using namespace chat;
 
 int main(int argc, char* argv[])
@@ -30,6 +30,8 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
+    
+
     // Application config
     const char* doc_root = argv[3];                               // Path to static files
     const char* ip = argv[1];                                     // IP where the server will listen
@@ -38,6 +40,9 @@ int main(int argc, char* argv[])
     // An event loop, where the application will run. The server is single-
     // threaded, so we set the concurrency hint to 1
     boost::asio::io_context ioc{1}; /* 异步运行时环境*/
+
+    chat::InitLogger(ioc);
+    LOG("DEBUG") << "Success Init";
 
     // Singleton objects shared by all connections 所有连接的单例控制对象
     auto st = std::make_shared<shared_state>(doc_root, ioc.get_executor());
@@ -63,6 +68,8 @@ int main(int argc, char* argv[])
     // Capture SIGINT and SIGTERM to perform a clean shutdown
     signals.async_wait([st, &ioc](error_code, int) {
         // Stop the Redis reconnection loop
+        LOG("DEBUG") << "exec cancel";
+        LoggerReset();
         st->redis().cancel();
 
         // Stop the io_context. This will cause run() to return

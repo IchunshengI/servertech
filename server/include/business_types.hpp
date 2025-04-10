@@ -25,6 +25,7 @@ struct user
 
     // Username
     std::string username;
+    
 };
 
 // A user that includes details about authentication.

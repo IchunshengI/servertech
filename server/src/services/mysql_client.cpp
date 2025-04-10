@@ -29,7 +29,7 @@
 #include "business_types.hpp"
 #include "business_types_metadata.hpp"  // Required by static_results
 #include "error.hpp"
-
+#include "services/mysql_pool.hpp"
 using namespace chat;
 
 // DB setup code. This is executed once at startup.
@@ -282,11 +282,12 @@ public:
         boost::mysql::results result;
 
         // Get a connection
+       // std::cout << "获取连接?" << std::endl;
         auto conn_result = get_connection(yield);
         if (conn_result.has_error())
             return std::move(conn_result).error();
         auto& conn = conn_result.value();
-
+        // std::cout << "获取成功" << std::endl;
         // Prepare a statement
         constexpr std::string_view
             stmt_sql = R"SQL(INSERT INTO users (username, email, password) VALUES (?, ?, ?))SQL";
@@ -446,7 +447,7 @@ std::unique_ptr<mysql_client> chat::create_mysql_client(boost::asio::any_io_exec
 
     // MySQL 连接参数
     auto params = default_handshake_params();
-    params.set_database("");
+    //params.set_database("");
     params.set_multi_queries(true);
     // params.set_database("");
     //params.set_multi_queries(true);

@@ -29,7 +29,7 @@ void mysql_pool::start_maintenance()
             boost::asio::bind_executor(
                     self->ex_,
                     [self](boost::asio::yield_context yield) {
-                        std::cerr << " 定时启动 " << std::endl;
+                        //std::cerr << " 定时启动 " << std::endl;
                         self->run_maintenance(yield);
                     }
                 )
@@ -83,6 +83,7 @@ bool mysql_pool::create_new_connection(boost::asio::yield_context yield){
     ec.clear();
     // /* 连接mysql */
     conn.async_connect(*endpoints.begin(), params_, diag,yield[ec]);
+    //std::cout <<"连接成功" << std::endl;
     if(ec){
         std::cerr << "mysql async_connect error " << std::endl;
         return false;

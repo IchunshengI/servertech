@@ -1,4 +1,4 @@
-#include "LogStream.h"
+#include "log/log_stream.h"
 #include <iostream>
 namespace chat{
 
