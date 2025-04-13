@@ -1,3 +1,5 @@
+# 
+rpc子结构部分编译说明可参照[此处](./doc/rpc_build.md)
 # 2025年4月9日
 现在的想法是最一个类似如下界面的东西
 ![Alt text](image/image.png)
