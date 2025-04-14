@@ -1,0 +1,8 @@
+- [x] 单对单 字符串通信
+- [x] 单对单 HTTP GET请求报文通信
+- [x] 单对单 HTTPS GET请求报文通信
+- [x] 单对单 HTTPS POST请求报文 发送问题给阿里云处理
+- [x] 处理 阿里云的响应报文，从中获取message信息------ content，reasoning_content，finish_reason，usage，model
+- [x] 同时服务两个连接客户端
+- [x] 隐藏API-KEY, 改为首次输入
+- [x] 测试Deepseek-R1满血的传输
