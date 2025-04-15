@@ -1,12 +1,14 @@
-// API-KEY传到代理格式 字符串形式
-API-KEY:api-key
+一、初始化user_id, session_id, api_key
+格式: 网络字节流
+总数据大小(4字节) + user_id长度(4字节) + user_id + session_id长度(4字节) + session_id + api_key长度(4字节) + api_key
 
+二、下游传输格式
+输入格式: 网络字节流
+content长度(4字节) + content内容
 
-// 下游传输格式
-返回格式: []内不一定传输
+返回格式: 网络字节流 []内不一定传输
 总数据大小(4字节) + content长度(4字节) + content内容 [+ reasoning_content长度(4字节) + reasoning_content内容]
 
-数据 内容包含
 1. 正确返回 字符串形式
     1. content: 含解答 ---------------- 字符串格式
     2. reasoning_content: 含推理过程 -- 字符串格式
@@ -19,7 +21,6 @@ API-KEY:api-key
 error: 错误代码, 提示词
 
 error错误代码：
-    0: API_KEY为空
     1：HTTP 解析错误: 非 Chunked 编码且没有 Content-Length
     2: HTTP 响应错误: HTTP的status非200 OK
     3: Chunked 解码失败

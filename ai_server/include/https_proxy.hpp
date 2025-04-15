@@ -2,6 +2,7 @@
 #define INCLUDE_HTTPS_REQUEST_CONTEXT_HPP
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 #include <arpa/inet.h>
 
 #include <openssl/ssl.h>
@@ -66,15 +67,16 @@ namespace https_proxy
         void handle_upstream_read(const boost::system::error_code &error,
                                   const size_t &bytes_transferred);
 
-        bool api_key_set_check(); // 检查是否设置了API-KEY, 如果已设置则返回true, 刚设置或者未设置返回false
-        void create_request_();   // 读取downstream_data_，并创建请求报文
+        void api_id_init();                                  // 初始化user_id, session_id, api_key, 未初始化则阻塞
+        bool request_check(const size_t &bytes_transferred); // 转移报文至temp_downstream_data_，并检查是否完整, 完整则返回true, 否则返回false
+        void create_request_(const std::string &content);    // 并创建请求报文
 
-        bool http_accept_check();                                     // 保存报文至temp_upstream_data_，并检查是否完整, 完整则返回true, 否则返回false
+        bool http_accept_check(const size_t &bytes_transferred);      // 转移报文至temp_upstream_data_，并检查是否完整, 完整则返回true, 否则返回false
         bool is_chunked_body_complete(const std::string &response);   // 检查chunked编码的信息是否完整, 传入保存的temp_upstream_data_
         std::string parse_chunked_body(const std::string &http_body); // 读取并返回chunked编码后的信息
 
         void process_response_();                                                     // 处理HTTP响应报文和提取信息, 默认调用create_response_()存储信息
-        void create_response_(const std::string &error_message);                      // 设置网络字节流信息, 不含推理，默认为传输错误信息
+        void create_response_(const std::string &content);                            // 设置网络字节流信息, 只含回答
         void create_response_(const std::string &content, const std::string &reason); // 设置网络字节流信息, 含回答和推理
 
         void close();
@@ -89,7 +91,10 @@ namespace https_proxy
         boost::asio::streambuf request_;
         boost::asio::streambuf response_;
 
+        std::string user_id;
+        std::string session_id;
         std::string api_key;
+        std::string temp_downstream_data_;
         std::string temp_upstream_data_;
 
         boost::mutex mutex_;

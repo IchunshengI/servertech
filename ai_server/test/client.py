@@ -16,19 +16,38 @@ def receive_exact(sock, length):
 if __name__ == "__main__":
     # 创建一个 socket 对象
     s = socket.socket()
-    s.connect(('172.25.77.247', 8080))
+    s.connect(('127.0.0.1', 8080))
+
+    # 传输user_id, session_id, api_key
+    user_id = input("user_id: ").encode()
+    session_id = input("session_id: ").encode()
+    api_key = input("api_key: ").encode()
+
+    total_length = 4 + 4 + len(user_id) + 4 + len(session_id) + 4 + len(api_key)
+    # 构造网络字节流
+    send_data = struct.pack('!I', total_length) # 总长度
+    send_data += struct.pack('!I', len(user_id))  # user_id 长度
+    send_data += user_id 
+    send_data += struct.pack('!I', len(session_id))  # session_id 长度
+    send_data += session_id 
+    send_data += struct.pack('!I', len(api_key))  # api_key 长度
+    send_data += api_key
+    s.send(send_data)
 
     try:
         while True:
             # 发送数据
-            send_data = input("客户端要发送的信息：").encode()
+            content = input("客户端要发送的信息：").encode()
+            # 构造网络字节流
+            send_data = struct.pack('!I', len(content))
+            send_data += content 
             s.send(send_data)
 
             # 1. 接收总长度（4字节）
             total_length_bytes = receive_exact(s, 4)
             total_length = struct.unpack('!I', total_length_bytes)[0]
-            print(
-                f"接收到的数据包长度: {total_length}, Debug: {total_length_bytes.hex()}")
+            # print(
+            #     f"接收到的数据包长度: {total_length}, Debug: {total_length_bytes.hex()}")
 
             if total_length > 1024*1024:
                 raise ValueError(f"无效的总长度")
@@ -45,7 +64,7 @@ if __name__ == "__main__":
             response_content = data[offset:offset+content_length]
             offset += content_length
 
-            print("回答长度:", content_length)
+            # print("回答长度:", content_length)
             print("回答:", response_content.decode('utf-8'))
 
             if total_length > content_length + 8:
@@ -57,7 +76,7 @@ if __name__ == "__main__":
                 response_reason = data[offset:offset+reason_length]
                 offset += reason_length
 
-                print("思考长度:", reason_length)
+                # print("思考长度:", reason_length)
                 print("思考:", response_reason.decode('utf-8'))
 
             # 验证数据完整性
