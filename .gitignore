@@ -1,4 +1,5 @@
 /__build/
+**/build*__/
 .cproject
 .project
 .settings/
@@ -24,3 +25,7 @@ server/cscope*
 .vscode-ctags
 server/tools/Log/*.log
 server/tools/rpc/build
+.github/workflows
+tools/rpc/build
+tools/HTTP_Proxy/build
+tools/rpc/test/build/
