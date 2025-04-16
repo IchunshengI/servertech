@@ -61,7 +61,7 @@ int main() {
     {
         // 1. 先接收4字节长度头
         uint32_t message_len;
-        if (!receive_exact(client_socket, reinterpret_cast<char*>(&message_len), sizeof(message_len))) {
+        if (!receive_exact(client_socket, (char*)(&message_len), sizeof(message_len))) {
             perror("Failed to receive length header");
             close(client_socket);
             return 1;
