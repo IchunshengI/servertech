@@ -1,0 +1,27 @@
+一、初始化user_id, session_id, api_key
+格式: 网络字节流
+总数据大小(4字节) + user_id长度(4字节) + user_id + session_id长度(4字节) + session_id + api_key长度(4字节) + api_key
+
+二、下游传输格式
+输入格式: 网络字节流
+content长度(4字节) + content内容
+
+返回格式: 网络字节流 []内不一定传输
+总数据大小(4字节) + content长度(4字节) + content内容 [+ reasoning_content长度(4字节) + reasoning_content内容]
+
+1. 正确返回 字符串形式
+    1. content: 含解答 ---------------- 字符串格式
+    2. reasoning_content: 含推理过程 -- 字符串格式
+// 2. usage: Token的总消耗量 --------- 整数格式
+// 3. model: 调用模型名称 ------------ 字符串格式
+// 4. created: 数据生成的唯一ID ------ 整数格式
+**注意** created是否为唯一ID,没经过确认, 我猜的
+
+2. 错误返回 字符串形式
+error: 错误代码, 提示词
+
+error错误代码：
+    1：HTTP 解析错误: 非 Chunked 编码且没有 Content-Length
+    2: HTTP 响应错误: HTTP的status非200 OK
+    3: Chunked 解码失败
+    4: JSON 解析错误: 返回内容解析失败
