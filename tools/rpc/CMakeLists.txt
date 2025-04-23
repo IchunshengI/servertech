@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.12)
 project(rpc_static LANGUAGES CXX)
 
+
+# 定义一个选项（OPTION），允许手动开关调试日志
+option(ENABLE_DEBUG_LOG "Enable debug logging" ON)  # 默认开启
+
+
+
 # 设置C++20标准
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -67,7 +74,7 @@ set(PROTO_GEN_SRC
 add_library(rpc_static  STATIC
     src/rpc_server.cpp
     src/rpc_channel.cpp
-
+    src/zookeeper_op.cpp
     # 其他需要编译的.cpp文件...
 		# log
 		src/log/log_stream.cpp
@@ -75,6 +82,10 @@ add_library(rpc_static  STATIC
 		src/log/log_persister.cpp
 		src/log/logger.cpp
 
+    # config
+    src/config/config.cpp
+
+    
 		# proto
 	#	src/rpc_meta.pb.cc
    ${PROTO_GEN_DIR}/rpc_meta.pb.cc
@@ -87,6 +98,8 @@ target_compile_options(rpc_static PRIVATE
     # 其他编译选项...
 )
 
+# 继承父项目的头文件路径（关键！）
+
 
 # 链接Boost和其他依赖库
 target_link_libraries(rpc_static 
@@ -96,6 +109,7 @@ target_link_libraries(rpc_static
     Boost::headers
     Boost::coroutine
     Boost::context
+    zookeeper_mt
     pthread
 )
 
@@ -103,3 +117,4 @@ target_link_libraries(rpc_static
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(test)
+add_subdirectory(http)

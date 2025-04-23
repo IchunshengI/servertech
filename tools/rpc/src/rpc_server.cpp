@@ -4,12 +4,15 @@
 	Brief		: rpc服务端实现类，启用c++20协程功能
 */
 
+#include "config/config.h"
 #include "rpc_server.h"
 #include "log/logger_wrapper.h"
 #include "rpc_controller.h"
 #include "rpc_meta.pb.h"
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <stdlib.h>
+#include "zookeeper_op.h"
 using namespace rpc;
 namespace rpc
 {
@@ -59,6 +62,45 @@ class RpcServerImpl final : public RpcServer
 		}
 		boost::asio::ip::tcp::endpoint ep(address, std::stoi(port));
 		boost::asio::ip::tcp::acceptor acceptor(co_await boost::asio::this_coro::executor, ep);
+    
+
+    std::string rpcIp = chat::Config::Instance().Load("rpcserverIp");
+    std::string rpcPort = (chat::Config::Instance().Load("rpcserverPort"));
+
+    /* 注册zookeeper服务 */
+    ZkClient zkCli;
+    zkCli.Start();
+    /* 加入zookeeper服务器 */
+    for (auto &sp : services_) 
+    {
+        // /service_name   /UserServiceRpc
+        std::string service_path = "/" + sp.first;
+        zkCli.Create(service_path.c_str(), nullptr, 0);
+         // 每方法服务实例创建 ***************************************************************************
+        // for (auto &mp : sp.second.mdescriptor_)
+        // {   
+        //   // /service_name/method_name   /UserServiceRpc/Login 存储当前这个rpc服务节点主机的ip和port
+        //   std::string method_path = service_path + "/" + mp.first;
+        //   zkCli.Create(method_path.c_str(), nullptr, 0,0); /* 持久化服务下的方法*/
+        //   // 3. 在方法节点下创建临时顺序子节点（实例节点）
+        //   std::string instance_path = method_path + "/instance_";
+        //   char method_path_data[128] = {0};
+        //   sprintf(method_path_data, "%s:%d", rpcIp.c_str(), rpcPort);
+        //   // ZOO_EPHEMERAL表示znode是一个临时性节点
+        //   zkCli.Create(instance_path.c_str(), method_path_data, strlen(method_path_data), ZOO_EPHEMERAL|ZOO_SEQUENCE);        
+        // }
+        // 每方法服务实例创建 ***************************************************************************
+
+        // 每服务实例创建 ***************************************************************************
+        std::string instance_path = service_path + "/instance_";
+        //char method_path_data[128] = {0};
+        //sprintf(method_path_data, "%s:%d", rpcIp.c_str(), rpcPort);
+        std::string service_path_data = rpcIp + ":" + rpcPort;
+        // ZOO_EPHEMERAL表示znode是一个临时性节点
+        zkCli.Create(instance_path.c_str(), service_path_data.c_str(), service_path_data.size(), ZOO_EPHEMERAL|ZOO_SEQUENCE);
+        // 每服务实例创建 ***************************************************************************
+
+    }
 
 		/* 存储一下服务端点信息 */
 		server_addr_ = server_addr;		
@@ -108,6 +150,7 @@ class RpcServerImpl final : public RpcServer
 		auto mdescriptor = services_[service_id].mdescriptor_[method_id];
 		auto recv_msg = service->GetRequestPrototype(mdescriptor).New();
 		auto resp_msg = service->GetResponsePrototype(mdescriptor).New();
+
 		recv_msg->ParseFromString(serialzied_data);
 
 		/* 回调 */
@@ -120,29 +163,30 @@ class RpcServerImpl final : public RpcServer
         }
     };
     
-    //auto* callback = new LambdaCallback;
-    auto callback = std::make_shared<LambdaCallback>();
+    auto* callback = new LambdaCallback;
+   // auto callback = std::make_shared<LambdaCallback>();
     // std::weak_ptr<LambdaCallback> weak_cb = callback;
-    callback->func = [this, resp_msg, socket](){
+    callback->func = [this, resp_msg, socket,callback](){
         //auto self = callback;
         boost::asio::co_spawn(
             socket->get_executor(),
-            [this, resp_msg, socket]() -> boost::asio::awaitable<void> {
+            [this, resp_msg, socket,callback]() -> boost::asio::awaitable<void> {
                 co_await CallbackDone(resp_msg, socket);
-                //delete callback;
+                delete callback;
             },
             boost::asio::detached
         );
     };																
 
-		RpcController controller;
-		service->CallMethod(mdescriptor, &controller, recv_msg, resp_msg, callback.get());
+		RpcController* controller_ptr = new RpcController();
+		service->CallMethod(mdescriptor, controller_ptr, recv_msg, resp_msg, callback);
   }
 
   boost::asio::awaitable<void> CallbackDone(google::protobuf::Message* response_msg,
                     std::shared_ptr<boost::asio::ip::tcp::socket> socket)
     final override
   {
+    //sleep(2);
 		int serialized_size = response_msg->ByteSizeLong();
 		std::string resp_data;
     LOG("Debug") << "serialized_size :" <<  serialized_size;
@@ -166,6 +210,7 @@ class RpcServerImpl final : public RpcServer
 			LOG("Error") << "resp_data async_write error: " << ec.message();
 		}
     LOG("Debug") << "Success send :" <<  serialized_size;
+    delete response_msg;
   }
 
  private:
@@ -224,7 +269,6 @@ class RpcServerImpl final : public RpcServer
     }
 
 	}
-
 
  	boost::asio::io_context& iox_; /* 协程上下文 */
   std::string server_addr_;

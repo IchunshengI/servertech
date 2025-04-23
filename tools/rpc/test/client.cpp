@@ -7,21 +7,24 @@
 #include <boost/asio.hpp>
 #include <memory>
 #include "log/logger_wrapper.h"
+#include "config/config.h"
 void print_usage() {
     std::cout << "Usage: echo_client <ip> <port>\n"
               << "Example: 127.0.0.1 12321" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        print_usage();
-        return -1;
-    }
+    // if (argc < 3) {
+    //     print_usage();
+    //     return -1;
+    // }
 
     // 初始化ASIO
     boost::asio::io_context iox;
     /* 初始化日志 */
     chat::InitLogger(iox);
+    // 这个操作应该放在全局的初始化函数中
+    chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/zoo.cfg"); /* */
     // 使用智能指针管理核心对象
     auto request = std::make_shared<RPCRequest>();
     auto response = std::make_shared<RPCResponse>();
@@ -29,8 +32,8 @@ int main(int argc, char* argv[]) {
     request->set_client_name("Client for tonull");
 
     // 创建RPC通道（改为shared_ptr）
-    const std::string addr = std::string(argv[1]) + ":" + argv[2];
-    auto channel = rpc::create_rpc_channel(addr, iox); 
+    //const std::string addr = std::string(argv[1]) + ":" + argv[2];
+    auto channel = rpc::create_rpc_channel("DemoService", iox); 
 
     // 启动异步调用协程（修复捕获方式）
     boost::asio::co_spawn(iox,
@@ -44,6 +47,7 @@ int main(int argc, char* argv[]) {
               std::cout << "错误! " << error.msg << std::endl;
               co_return;
             }
+            
             // 使用protobuf自动生成的存根类
             DemoService_Stub stub(channel.get());
 
