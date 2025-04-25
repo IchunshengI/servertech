@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/boost_test.dir/boost_test.cpp.o -o boost_test  -Wl,-rpath,/usr/local/lib /usr/local/lib/libboost_system.so.1.86.0 /usr/local/lib/libboost_coroutine.so.1.86.0 /usr/local/lib/libboost_context.so.1.86.0 -lpthread 

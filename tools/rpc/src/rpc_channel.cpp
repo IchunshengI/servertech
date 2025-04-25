@@ -5,7 +5,9 @@
 */
 #include "rpc_channel.h"
 #include <boost/asio.hpp>
+#include <boost/asio/error.hpp>
 #include <boost/asio/use_awaitable.hpp>
+#include <boost/system/detail/error_code.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
 #include <coroutine> 
@@ -13,12 +15,13 @@
 #include "log/logger_wrapper.h"
 #include "google/protobuf/message.h"
 #include "rpc_meta.pb.h"
+#include "zookeeper_op.h"
 namespace rpc{
 
 using chat::LOG;
 class RpcChannelImp : public RpcChannel{
  public:
-  RpcChannelImp(std::string server_addr, boost::asio::io_context& iox) : server_addr_(server_addr), iox_(iox), socket_(iox) {
+  RpcChannelImp(std::string server_name, boost::asio::io_context& iox) : server_name_(server_name), iox_(iox), socket_(iox) {
   }
   ~RpcChannelImp () override{
     LOG("Debug") << "~RpcChannelImp";
@@ -74,13 +77,55 @@ class RpcChannelImp : public RpcChannel{
                             boost::asio::detached);
    }
  private:
-  /* 初始化 */
+  /* 
+    静态回调函数
+  */
+  static void zk_watcher(zhandle_t *zh  __attribute__((unused)), 
+                         int type,
+                         int state, const char* path __attribute__((unused)), 
+                         void *watcherCtx __attribute__((unused))
+                         )
+  {
+    if (type == ZOO_SESSION_EVENT){
+    /* 初始化连接状态 */
+    if (state == ZOO_EXPIRED_SESSION_STATE){
+      // RpcChannelImp * rpc_channel_t = (RpcChannelImp*)zoo_get_context(zh);
+      // rpc_channel_t->Start();
+      /* 简单做法吧，直接客户端错误 */
+      LOG("Error") << "can not connect to the server!";
+      exit(-1);
+    } 
+  }
+  }
+
+  /* 
+    初始化 
+  */
   boost::asio::awaitable<error_with_message> Start() override{
-    std::cout << "?1" << std::endl;
+    boost::system::error_code ec;
+    if (socket_.is_open()){
+      socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both); 
+      socket_.close(ec);
+      if (ec){
+        LOG("Error") << "socket close error!";
+        co_return error_with_message{ec, "socket close error!"};
+      }
+    }
+
+    /* 
+      这里重新加载一次zookeeper的服务端点
+    */
+    ZkClient cli;
+    cli.Start();
+    std::string server_addr_ = cli.GetData(("/"+server_name_).c_str(), zk_watcher, this);
+    //std::string server_addr_ = "192.168.1.100:8000";
+
     size_t split_pos = server_addr_.find(":");
     std::string ip = server_addr_.substr(0, split_pos);
-    std::string port = server_addr_.substr(split_pos + 1);
-    
+    std::string port = server_addr_.substr(split_pos + 1,4);
+    //std::cerr << "port:" << port << std::endl;
+    //LOG("Error") << server_addr_;
+    //exit(-1);    
     if(ip.empty() || port.empty()){
 			
 			LOG("Error") << "Miss Ip:port info";
@@ -90,15 +135,16 @@ class RpcChannelImp : public RpcChannel{
 			};
 		}
 
+
     /* 解析端点 */
-    boost::system::error_code ec;
+    //boost::system::error_code ec;
     boost::asio::ip::tcp::resolver resolver(iox_);
     auto endpoints = co_await resolver.async_resolve(ip, 
                                                                                   port,
                                                                                   boost::asio::redirect_error(boost::asio::use_awaitable,ec)
                                                                                   );
     if (ec) {
-      LOG("Error") << "resolver async_resolve error" << ec.message();
+      LOG("Error") << "resolver async_resolve error" << ec.message() << std::endl << "ip :" << ip << " port: " << stoi(port); 
       co_return error_with_message{
         ec, " resolver async_resolve error"
       };
@@ -161,13 +207,13 @@ class RpcChannelImp : public RpcChannel{
     co_return boost::system::error_code{};
   }
 
-  std::string server_addr_;
+  std::string server_name_;
   boost::asio::io_context& iox_;
   boost::asio::ip::tcp::socket socket_;
 
 };
 
-std::shared_ptr<RpcChannel> create_rpc_channel(std::string server_addr, boost::asio::io_context& iox){
-  return std::make_shared<RpcChannelImp>(std::move(server_addr), iox);
+std::shared_ptr<RpcChannel> create_rpc_channel(std::string server_name, boost::asio::io_context& iox){
+  return std::make_shared<RpcChannelImp>(std::move(server_name), iox);
 }
 } // namespace rpc

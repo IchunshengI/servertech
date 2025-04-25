@@ -18,7 +18,7 @@ std::string LogStream::formatTime(const std::chrono::system_clock::time_point &t
 }
 
 LogStream::~LogStream(){
-    logger_->append(std::move(this->str() + "\n"));
+    logger_->append(this->str()+"\n"); /* 这里不用手动std::move 编译器会自动开启优化 */
 }
 
 

@@ -40,14 +40,17 @@ endif()
 
 **· Zookeeper**
 
-    安装zookeeper服务端、客户端以及开发套件
-    sudo apt install zookeeper zookeeperd libzookeeper-mt-dev
+    安装zookeeper开发套件
+    sudo apt install libzookeeper-mt-dev
+    服务端安装
+    https://blog.csdn.net/qq_18402475/article/details/135623697
 
 
 
-*** google/protobuf**
-
-    达到
+**. google/protobuf**
+  
+  https://github.com/protocolbuffers/protobuf
+  
 
 # 编译
 需要修改原有开源项目的cmakelists，去设置三个编译组件的库目录和头文件目录
