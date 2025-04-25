@@ -3,7 +3,7 @@ project(rpc_static LANGUAGES CXX)
 
 
 # 定义一个选项（OPTION），允许手动开关调试日志
-option(ENABLE_DEBUG_LOG "Enable debug logging" ON)  # 默认开启
+option(ENABLE_DEBUG_INFO "Enable debug logging" ON)  # 默认开启
 
 
 
@@ -117,4 +117,4 @@ target_link_libraries(rpc_static
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(test)
-add_subdirectory(http)
+add_subdirectory(ai_server)
