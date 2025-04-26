@@ -60,7 +60,17 @@ void LogPersister::read(){
     const size_t curr_write = read_buffer->write_pos_.load();
 
     /* 说明目前没有数据 */
-    if(curr_read == curr_write) return;
+    if(curr_read == curr_write)
+    {
+      if (read_buffer->is_full()){
+        read_buffer->clear();
+      }
+      if (read_buffer != logger_->currBufferPtr_){
+        std::lock_guard<std::mutex> lock(logger_->mutex_);
+        logger_->fullBufferPtr_ = nullptr;
+      }
+      return;
+    }
 
     char* data_ptr = read_buffer->buffer_.data() + curr_read;
     int len = 0;

@@ -13,12 +13,14 @@
 | 2025年4月16日   | ①AI_server 完成http报文请求与回发，完成基本的云端大模型问答请求<br>②boost 协程 + rpc框架示例[测试完成](./tools/rpc/) |   <span style="color:cyan">①将rpc接入AI_server充当服务端，完成两侧开发任务的隔离</span>  <br><span style="color:yellow">②线程池部分要思考如何与协程接入配合</span>                |
 |2025年4月23日 | ①c++20协程学习,[参考资料-协程rpc](https://github.com/jsc723/coroutine-server), [参考资料-协程io_uring](https://github.com/Codesire-Deng/co_context) <br>②zookeeper 测试代码加入| ①修改AI_server原本的异步流程demo，改成boost协程的形式并搭建rpc服务
 |2025年4月26日| AI_server的rpc调用测试代码[验证通过](tools/rpc/ai_server/) | ①目前暂不考虑自己写无栈协程部分(需要自己写调度)，思考线程池与协程之间可以怎么配合 <br>②前端界面增加ai聊天功能
-# 开发日志 
-详细日志可在[此处查看](doc/devolopment.md)
 
-# AI服务
-对应AI服务器的设计可在[此处查看](./ai_server/README.md)
+# 开发思路 
+详细日志可在[此处查看](doc/开发日志.md)
+
 # 编译说明
-rpc子结构部分编译说明可参照[此处](./doc/rpc_build.md)
+
+需要提前安装好以下组件
+
+  boost Zookeeper protobuf redis mysql
 
 其余部分补充中......

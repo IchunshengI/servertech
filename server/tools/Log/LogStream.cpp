@@ -34,7 +34,7 @@ RingBuffer::~RingBuffer()
 bool RingBuffer::clear(){
     if(is_full_.load()){ /* 满的时候才可以清空 */
         read_pos_.store(0);
-        write_pos_.store(1);
+        write_pos_.store(0);
         is_full_.store(false);  /* 这里只会被一个后台线程调用，读取完数据后清空计数 */
         return true;
     }else{

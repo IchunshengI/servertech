@@ -14,7 +14,7 @@ class LogPersister;
 
 
 class Logger{
-
+friend class LogPersister;
 public:
 
     //static Logger& instance();

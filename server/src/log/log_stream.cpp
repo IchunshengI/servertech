@@ -34,7 +34,7 @@ RingBuffer::~RingBuffer()
 bool RingBuffer::clear(){
     if(is_full_.load()){ /* 满的时候才可以清空 */
         read_pos_.store(0);
-        write_pos_.store(1);
+        write_pos_.store(0);
         is_full_.store(false);  /* 这里只会被一个后台线程调用，读取完数据后清空计数 */
         return true;
     }else{
@@ -68,8 +68,7 @@ int RingBuffer::push(const std::string& log){
     const size_t writable  = std::min(log_size,free_space);
     const size_t first_chunk = std::min(writable , capacity - write_pos_.load());
     memcpy(buffer_.data()+write_pos_.load(), log.data(), first_chunk);
-
-    if(first_chunk < writable ){
+if（第一个块<可写的）{
         memcpy(buffer_.data(), log.data()+first_chunk, writable - first_chunk);
     }
 
