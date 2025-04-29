@@ -18,6 +18,8 @@ namespace rpc{
 enum class errc {
     not_found = 1,
     http_error,
+    redis_runtime_error,
+    nums_error,
     // 其他错误码...
 };
 

@@ -54,12 +54,12 @@ private:
     std::string host_;                      /* 连接目前ip*/
     boost::mysql::handshake_params params_; /* 连接参数 */
     config cfg_;                            /* 连接池配置信息 */
-    boost::asio::steady_timer timer_;        /* 定时器 */
+    boost::asio::steady_timer timer_;       /* 定时器 */
     std::deque<idle_entry> idle_conns_;     /* 目前空闲的连接队列 */ /* 指定大小然后加个锁 */
     std::atomic<int> total_count_{0};            /* 总连接数目 */
-    std::deque<std::function<void(boost::system::error_code, connection_type)>> waiting_queue_; /* 等待队列 */
-    bool closed_{false};
-    bool idle_check_scheduled_{false};
+    //std::deque<std::function<void(boost::system::error_code, connection_type)>> waiting_queue_; /* 等待队列 */
+    // bool closed_{false};
+    // bool idle_check_scheduled_{false};
 };
 
 

@@ -158,7 +158,7 @@ std::string MethodProcess::HttpProcessNotReason(std::string& HttpData){
   if (status_code != "200") // HTTP 响应错误
   {
     LOG("Error") << "HTTP response error: " << status_code;
-    return "";
+    //return "";
   }
 
     // HTTP 响应正确，处理HTTP_Body
@@ -187,13 +187,19 @@ std::string MethodProcess::HttpProcessNotReason(std::string& HttpData){
       // 解析json，提取内容
   try
   {
+
+    /* {"error":{"message":"Incorrect API key provided. ","type":"invalid_request_error","param":null,"code":"invalid_api_key"},"request_id":"d4dea040-7e62-9e43-857f-a723792def05"}*/
       boost::json::value upstream_json = boost::json::parse(json_body);
+
+      const auto& response_obj = upstream_json.as_object();
+      if (response_obj.contains("error")) {
+            const auto& error_obj = response_obj.at("error").as_object();
+            rpc_respon_message = error_obj.at("message").as_string().c_str();
+            // std::cerr << "API请求错误: " << error_msg << std::endl;
+            return rpc_respon_message; // 返回空或携带错误信息
+        }
       const auto &choices = upstream_json.at("choices").as_array();
       const auto &message = choices[0].at("message").as_object();
-
-
-      // // 序列化为字符串
-      // response_body = json::serialize(res_json);
 
       rpc_respon_message = message.at("content").as_string().c_str();
      

@@ -19,6 +19,7 @@ void mysql_pool::init(){
     );
     start_maintenance();
 }
+
 /* 开始连接 */
 void mysql_pool::start_maintenance()
 {
@@ -30,12 +31,12 @@ void mysql_pool::start_maintenance()
                     self->ex_,
                     [self](boost::asio::yield_context yield) {
                         //std::cerr << " 定时启动 " << std::endl;
-                        self->run_maintenance(yield);
+                        self->run_maintenance(yield); /* 连接池维护 */
+                        self->start_maintenance();    /* 重新设置定时器 */
                     }
                 )
             );
         }
-        self->start_maintenance();
     });
 }
 mysql_pool::~mysql_pool()
@@ -88,6 +89,8 @@ bool mysql_pool::create_new_connection(boost::asio::yield_context yield){
         std::cerr << "mysql async_connect error " << std::endl;
         return false;
     }
+
+    /* 如果当前的连接没有大于最大连接数，就将当前的连接压进空闲连接中 */
     std::unique_lock<std::mutex> lock(mutex_);
     if(total_count_.load() < cfg_.max_connections){
         this->idle_conns_.push_back({std::move(conn), std::chrono::steady_clock::now()});
@@ -104,6 +107,7 @@ bool mysql_pool::create_new_connection(boost::asio::yield_context yield){
  std::pair<boost::system::error_code, mysql_pool::connection_type>  mysql_pool::get_connection(boost::asio::yield_context yield){
     boost::system::error_code ec;
     connection_type conn(ex_);
+    
 
     if (!idle_conns_.empty()) {
             // 直接返回空闲连接
@@ -112,7 +116,7 @@ bool mysql_pool::create_new_connection(boost::asio::yield_context yield){
             idle_conns_.pop_front();
             ec.clear();
     }
-    // 通过post确保在strand_中执行
+   
     else if (total_count_.load() < cfg_.max_connections) {
             // 创建新连接
             if(create_new_connection(yield)){
@@ -123,6 +127,7 @@ bool mysql_pool::create_new_connection(boost::asio::yield_context yield){
             }
     } else {
         // 连接池已满
+        /* 塞入等待队列？这里直接返回吧，交由业务去处理 */
         ec = boost::asio::error::operation_aborted;
     }
 
