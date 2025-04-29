@@ -11,6 +11,7 @@
 #include "boost/asio/cancel_at.hpp"
 namespace chat{
 
+class RedisClient;
 class AiServerImpl : public AiServer,
                      public std::enable_shared_from_this<AiServerImpl>
 {
@@ -32,13 +33,8 @@ class AiServerImpl : public AiServer,
 
 
  private:
-  struct SessionInfo{
-    int user_id_;
-    int session_id_;
-    std::string api_key_;
-  };
   boost::asio::io_context& iox_;
-  SessionInfo session_info_; /* 到时候一个会话将会有一个session_info结构体的,或者说，要维护一个redis连接  */
+  std::shared_ptr<RedisClient> redis_client_;
   
 }; // namespace chat
 

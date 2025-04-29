@@ -1,15 +1,22 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/system/detail/error_code.hpp>
+#include <cstdlib>
 #include "log/logger_wrapper.h"
 
 #include "redis_pool.h"
 #include "result_with_message.h"
+using rpc::result_with_message;
+using rpc::error_with_message;
 using chat::LOG;
 
 int main(){
-
+//ai_server_CSyr6q4GQ0oqNiQHu55sTA==
   boost::asio::io_context iox;
 
+
+  /* 
+    redis 存值测试
+ */
   auto redis_pool = chat::create_redis_pool(iox);
   boost::asio::co_spawn(
     iox,
@@ -27,27 +34,20 @@ int main(){
       //std::cout << "地址为 " << conn.get()<< std::endl;
       boost::redis::request req;
       req.push("SET", "test_key", "Hello Redis!");
-      boost::redis::response<std::string> resp;
+      boost::redis::ignore_t resp; 
+      //boost::redis::response<std::string> resp;
      co_await conn->async_exec(req, resp, boost::asio::redirect_error(boost::asio::use_awaitable, ec));
       if (ec){
         std::cerr << "error : " << ec.message();
         co_return;
       }
-       // 处理结果
-      auto& set_result = std::get<0>(resp);
-      if (set_result.has_error()) {
-           std::cerr << "error" << std::endl;
-      } else {
-         std::cerr << set_result.value() << std::endl;
-      }
+
       co_return;
     },
     boost::asio::detached
   );
-   iox.run();
-//    std::cerr << "hahhahaha" << std::endl;
-// auto work = boost::asio::make_work_guard(iox);
-//  work.reset(); // 允许 iox 自然停止
+  //  iox.run();
+
 
 
 //    boost::redis::connection conn_(iox);
@@ -103,5 +103,49 @@ int main(){
 //   );
 
 //  iox.run();
+
+
+  /* 
+  redis 哈希取值测试 
+ */
+  boost::asio::co_spawn(
+    iox,
+    [&]() -> boost::asio::awaitable<void> {
+      boost::system::error_code ec;
+      auto result = co_await redis_pool->GetConnection();
+      if (result.has_error())
+      {
+        std::cerr << "error" << std::endl;
+        co_return;
+      }
+      std::string redis_key = "xx";
+      auto& conn = result.value();
+      boost::redis::request req;
+      //boost::redis::response<std::map<std::string, std::string>> resp;  // 存储返回的哈希数据
+      boost::redis::response<std::int64_t, std::map<std::string, std::string>> resp;
+      req.push("EXISTS", redis_key);
+      req.push("HGETALL", redis_key);
+
+      co_await conn->async_exec(req, resp, boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+
+      if (ec) {
+        LOG("Error") << "redis async_exec error: " << ec.message();
+        co_return ;
+      }
+
+      auto key_exists = std::get<0>(resp);  // EXISTS 返回 0/1
+      if (key_exists == 0) {
+        std::cerr << "session key not found in redis" << std::endl;
+        co_return;
+      }
+
+      const auto& hash = std::get<1>(resp);
+      std::string api_key_    = hash->at("api_key");
+      std::cerr << "api_key is : " << api_key_ << std::endl;
+      co_return;
+    },
+    boost::asio::detached
+  );
+   iox.run();
   return 0;
 }

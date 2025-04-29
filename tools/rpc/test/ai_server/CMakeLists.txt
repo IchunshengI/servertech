@@ -15,21 +15,27 @@ link_directories(
   ${PROTOBUF_INSTALL_DIR}/lib
 )
 
+set(AI_SERVER_DIR "${CMAKE_SOURCE_DIR}/src/ai_server")
 include_directories(
   ${PROTOBUF_INSTALL_DIR}/include  # Protobuf核心头文件
-  ${CMAKE_SOURCE_DIR}/ai_server  # 生成的.pb.h文件路径
+  ${AI_SERVER_DIR}  # 生成的.pb.h文件路径
 )
 
 find_package(Boost REQUIRED COMPONENTS headers context coroutine json PATHS /usr/local/lib)
 find_package(OpenSSL REQUIRED)
 
-set(AI_SERVER_DIR "${CMAKE_SOURCE_DIR}/ai_server")
 
 add_executable(ai_server 
                server.cpp
                ${AI_SERVER_DIR}/ai_server_impl.cpp
                ${AI_SERVER_DIR}/method_process.cpp
-               ${AI_SERVER_DIR}/ai_server.pb.cc)
+               ${AI_SERVER_DIR}/ai_server.pb.cc
+               ${AI_SERVER_DIR}/redis_pool.cpp
+               ${AI_SERVER_DIR}/boost/boost_redis.cpp
+               ${AI_SERVER_DIR}/redis_client.cpp
+               ${CMAKE_SOURCE_DIR}/src/until/general.hpp
+               ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
+               )
 
 
 # # 链接父项目的静态库
@@ -74,7 +80,13 @@ add_executable(test_function
                test_function.cpp
                ${AI_SERVER_DIR}/ai_server_impl.cpp
                ${AI_SERVER_DIR}/method_process.cpp
-               ${AI_SERVER_DIR}/ai_server.pb.cc)
+               ${AI_SERVER_DIR}/ai_server.pb.cc
+               ${AI_SERVER_DIR}/boost/boost_redis.cpp
+               ${AI_SERVER_DIR}/redis_pool.cpp
+               ${AI_SERVER_DIR}/redis_client.cpp
+               ${CMAKE_SOURCE_DIR}/src/until/general.hpp
+               ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
+               )
 
 if(ENABLE_DEBUG_INFO)
  target_compile_definitions(test_function PRIVATE DEBUG_INFO)
@@ -101,7 +113,12 @@ add_executable(redis_test
                ${AI_SERVER_DIR}/method_process.cpp
                ${AI_SERVER_DIR}/redis_pool.cpp
                ${AI_SERVER_DIR}/ai_server.pb.cc
-               ${AI_SERVER_DIR}/boost/boost_redis.cpp)
+               ${AI_SERVER_DIR}/boost/boost_redis.cpp
+               
+               ${AI_SERVER_DIR}/redis_client.cpp
+               ${CMAKE_SOURCE_DIR}/src/until/general.hpp
+               ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
+               )
 
 if(ENABLE_DEBUG_INFO)
  target_compile_definitions(test_function PRIVATE DEBUG_INFO)

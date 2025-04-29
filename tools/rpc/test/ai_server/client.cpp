@@ -25,7 +25,7 @@ int main(){
   auto controller = std::make_shared<rpc::RpcController>();
   request->set_user_id(1);
   request->set_session_id(1);
-  request->set_api_key("sk-91");
+  request->set_api_key("xx");
 
   // 创建strand保证顺序执行
   auto strand = boost::asio::make_strand(iox);
@@ -53,7 +53,7 @@ int main(){
                           std::cerr << "RPC Failed: " 
                                   << controller->ErrorText() << std::endl;
                       } else {
-                          std::cout << "Serial Number: " 
+                          std::cout << "Respon message is : " 
                                   << response->respon_message() << std::endl;
                       }
                       co_await rpc_done_channel->async_send(boost::system::error_code{}, boost::asio::use_awaitable);

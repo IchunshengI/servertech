@@ -12,13 +12,12 @@
 #include <boost/redis/config.hpp>
 #include <boost/redis/connection.hpp>
 #include <cstddef>
-#include <deque>
-
 #include <memory>
 #include <mutex>
 #include <atomic>
 #include <chrono>
 #include "result_with_message.h"
+#include <deque>
 namespace chat{
 
 using rpc::result_with_message;
@@ -70,7 +69,7 @@ private:
   RedisPoolConfig redis_pool_config_;
   boost::asio::steady_timer timer_;
   std::atomic<int> total_count_;
-  std::list<idle_entry> idle_conns_;    /* 空闲的连接链表，这里用链表的原因是redis connection不支持移动赋值=语义 */
+  std::deque<idle_entry> idle_conns_;    /* 空闲的连接链表，这里用链表的原因是redis connection不支持移动赋值=语义 */
   std::atomic<bool> closed_;            /* 连接池关闭 */
   
 };

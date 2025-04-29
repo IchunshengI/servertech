@@ -29,3 +29,4 @@ server/tools/rpc/build
 tools/rpc/build
 tools/HTTP_Proxy/build
 tools/rpc/test/build/
+**/compile_commands.json

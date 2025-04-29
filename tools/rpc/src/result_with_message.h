@@ -20,6 +20,7 @@ enum class errc {
     http_error,
     redis_runtime_error,
     nums_error,
+    invalid_base64,
     // 其他错误码...
 };
 

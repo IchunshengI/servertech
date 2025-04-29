@@ -92,14 +92,20 @@ awaitable<void> RedisPool::RunMaintenance()
     const auto now = std::chrono::steady_clock::now();
 
     /* 这里删除后会直接析构掉原来的连接对象 */
-    auto it = idle_conns_.remove_if([&](idle_entry& entry) {
-      if((now - entry.last_used) > redis_pool_config_.max_idle_time_)
-      {
-        entry.conn->cancel();
-        return true;
-      }
-      return false;
+    // auto it = idle_conns_.remove_if([&](idle_entry& entry) {
+    //   if((now - entry.last_used) > redis_pool_config_.max_idle_time_)
+    //   {
+    //     entry.conn->cancel();
+    //     return true;
+    //   }
+    //   return false;
+    // });
+    auto it = std::remove_if(this->idle_conns_.begin(),
+    this->idle_conns_.end(),
+    [&](const auto& entry){
+        return (now - entry.last_used) > this->redis_pool_config_.max_idle_time_;
     });
+    this->idle_conns_.erase(it, this->idle_conns_.end());
     total_count_.store(idle_conns_.size());
   }
 
@@ -186,10 +192,6 @@ void RedisPool::Close()
   closed_.store(true);
   timer_.cancel();
   std::unique_lock<std::mutex> lock(mutex_);
-    /* 手动释放 */
-  for (auto& entry : idle_conns_) {
-      entry.conn->cancel(); // 取消所有空闲连接
-  }
   idle_conns_.clear();
   total_count_.store(0);
 }
