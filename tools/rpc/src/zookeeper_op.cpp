@@ -66,12 +66,14 @@ void ZkClient::Create(const char *path, const char* data, int datalen, int state
   			&ZOO_OPEN_ACL_UNSAFE, state, path_buffer, bufferlen);
   		if (flag == ZOK)
   		{
+#ifdef DEBUG_INFO          
   			LOG("Debug")<< "znode create success... path:" << path ;
+#endif
   		}
   		else
   		{
-  			LOG("Debug")<< "flag:" << flag ;
-  			LOG("Debug")<< "znode create error... path:" << path ;
+  			LOG("Error")<< "flag:" << flag ;
+  			LOG("Error")<< "znode create error... path:" << path ;
   			exit(EXIT_FAILURE);
   		}
   	}    
@@ -91,7 +93,9 @@ std::string ZkClient::GetData(const char *path, watcher_fn watcher_cb, void* con
 // 2. 遍历子节点获取数据
   for (int i = 0; i < children.count; ++i) {
     std::string child_path = std::string(path) + "/" + children.data[i];
+#ifdef DEBUG_INFO  
 	  LOG("Debug")<< "child_path is << " << child_path;
+#endif
     char buffer[128];
     int buffer_len = sizeof(buffer);
     flag = zoo_get(zhandle_, child_path.c_str(), 0, buffer, &buffer_len, nullptr);

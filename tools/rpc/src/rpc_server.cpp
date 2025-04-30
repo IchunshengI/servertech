@@ -159,7 +159,9 @@ class RpcServerImpl final : public RpcServer
         std::function<void()> func;
         void Run() override { func(); }
         ~LambdaCallback(){
+#ifdef DEBUG_INFO          
           LOG("Debug") << "~LambdaCallback";
+#endif          
         }
     };
     
@@ -189,7 +191,9 @@ class RpcServerImpl final : public RpcServer
     //sleep(2);
 		int serialized_size = response_msg->ByteSizeLong();
 		std::string resp_data;
+#ifdef DEBUG_INFO   
     LOG("Debug") << "serialized_size :" <<  serialized_size;
+#endif
 		resp_data.resize(sizeof(uint32_t) + serialized_size);
 
 		/* 按网络字节序写入长度头 */
@@ -209,7 +213,9 @@ class RpcServerImpl final : public RpcServer
 		if (ec) {
 			LOG("Error") << "resp_data async_write error: " << ec.message();
 		}
+#ifdef DEBUG_INFO      
     LOG("Debug") << "Success send :" <<  serialized_size;
+#endif
     delete response_msg;
   }
 
@@ -232,7 +238,9 @@ class RpcServerImpl final : public RpcServer
 			co_return;
 		}
 		rpc_meta_size = ntohl(rpc_meta_size);  // 网络字节序 → 主机字节序
+#ifdef DEBUG_INFO      
     LOG("Debug") << "rpc_meta_size : " << rpc_meta_size;
+#endif
 		/* 接收元数据 */
 		std::vector<char> rpc_meta_data(rpc_meta_size);
 		co_await socket->async_receive(boost::asio::buffer(rpc_meta_data), boost::asio::redirect_error(boost::asio::use_awaitable, ec));
@@ -255,12 +263,12 @@ class RpcServerImpl final : public RpcServer
 			LOG("Error") << "request_data async_receive error";
 			co_return;
 		}
-
+#ifdef DEBUG_INFO  
 		LOG("Debug") << "Server recv info:\n" 
 								 << "service_id: " << rpc_meta_data_proto.service_id() << "\n"
 								 << "method_id: " << rpc_meta_data_proto.method_id() << "\n"
 								 << "data_size: " << rpc_meta_data_proto.data_size();
-
+#endif
 		/* rpc调用 */
 		ProcRpcData(rpc_meta_data_proto.service_id(),
 							  rpc_meta_data_proto.method_id(),

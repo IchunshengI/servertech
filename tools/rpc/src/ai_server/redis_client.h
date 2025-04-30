@@ -3,6 +3,7 @@
   Author	:	chunsheng
   Brief		:	redis 具体插入删除的操作类
 */
+#include <boost/asio/awaitable.hpp>
 #include <memory>
 #pragma
 #include <boost/asio/io_context.hpp>
@@ -31,6 +32,7 @@ public:
 
   /* 传递初始信息并返回生成的session */
   awaitable<result_with_message<std::string>> SessionInit(SessionInfo);
+  awaitable<result_with_message<std::string>> GetApiKey(std::string& session_token);
 private:
   static std::string GetRedisKey(std::string_view session);
   boost::asio::io_context& iox_;

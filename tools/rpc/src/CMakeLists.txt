@@ -73,7 +73,9 @@ target_compile_options(rpc_static PRIVATE
     -Wextra
     # 其他编译选项...
 )
-
+if(ENABLE_DEBUG_INFO)
+  target_compile_definitions(rpc_static PRIVATE DEBUG_INFO)
+endif()
 # 继承父项目的头文件路径（关键！）
 
 

@@ -24,7 +24,9 @@ class RpcChannelImp : public RpcChannel{
   RpcChannelImp(std::string server_name, boost::asio::io_context& iox) : server_name_(server_name), iox_(iox), socket_(iox) {
   }
   ~RpcChannelImp () override{
+#ifdef DEBUG_INFO  
     LOG("Debug") << "~RpcChannelImp";
+#endif    
   }
   void CallMethod(const ::google::protobuf::MethodDescriptor* method,
                           google::protobuf::RpcController* controller,
@@ -54,8 +56,10 @@ class RpcChannelImp : public RpcChannel{
       }
       
       std::string serialzied_str;
+#ifdef DEBUG_INFO        
       LOG("Debug") << "rpc_meta_size : " << rpc_meta_str.size();
       LOG("Debug") << "request_size : " << request_data_str.size();
+#endif
       /* 网络字节序写入 */
       uint32_t rpc_meta_size = htonl(rpc_meta_str.size());
       serialzied_str.append(reinterpret_cast<const char*>(&rpc_meta_size), sizeof(uint32_t));

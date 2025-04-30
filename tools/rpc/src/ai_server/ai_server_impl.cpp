@@ -70,22 +70,32 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
       std::string query = request->query_message();
       MethodProcess methodProcess(this->iox_);
       methodProcess.Init("dashscope.aliyuncs.com");
+      std::string token = "ai_server_ZmLRrhN+UCpM0jHsSXz4Xw==";
+      auto result = co_await redis_client_->GetApiKey(token);
 
-      /* 取api_key */
-      /* 这里之后要co_await 远端服务，然后写回 */
-      // auto result = co_await methodProcess.CallModelByHttps(query, session_info_.api_key_);
-      // if (result.has_error()) {
-      //     std::cerr << "Error starting server: " << result.error().ec.message() << std::endl;
-      // }
-      // response->set_respon_message(result.value());
-      //response->set_respon_message("hello");
+      /* 处理apikey的获取结果*/
+      if (result.has_error())
+      {
+        if (result.error().ec == rpc::errc::not_found) /* 有错误直接回发 */
+        {
+          response->set_respon_message("can not found api key"); 
+        }else{
+          response->set_respon_message("server error, please try again");
+        }
+      } else{
+        std::string api_key = result.value();
+        auto call_result = co_await methodProcess.CallModelByHttps(query, api_key);
+        if (call_result.has_error()) {
+          LOG("Error") << "CallModelByhttps error : " << call_result.error().message();
+          response->set_respon_message(call_result.error().message());
+        } else {
+          response->set_respon_message(call_result.value());
+        }        
+      }
+
       delete request;
       delete controller;
       done->Run();
-
-      //std::cout << "二次打印数据为: \n" << result.value() << std::endl;
-      
-      /* 数据处理部分，入库等操作 */
 
       co_return;
     },

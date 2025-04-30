@@ -111,19 +111,20 @@ boost::asio::awaitable<result_with_message<std::string>> MethodProcess::CallMode
   auto response_data = co_await RecvHttpsResponse(stream_buf, ssl_stream);
 
   if (response_data.has_error()){
-    std::cout << "错误!" << std::endl;
+    LOG("Error") << "recvhttps response error : " << response_data.error().ec.message();
     co_return error_with_message{response_data.error().ec, response_data.error().ec.message()};
   }
-
-  std::cout << "接收报文为 : \n" << response_data.value() << std::endl;   
+#ifdef DEBUG_INFO
+  std::cout << "接收报文为 : \n" << response_data.value() << std::endl; 
+#endif  
   // std::cout << static_cast<const void*>(response_data.value().data()) << std::endl;
   // co_return response_data.value();
   
   // 7. 处理报文
   auto respon_message = HttpProcessNotReason(response_data.value());
-  
+#ifdef DEBUG_INFO
   std::cout << "回发消息为: " << respon_message << std::endl;
-
+#endif  
   co_return respon_message;
   // 8. 数据入库处理
 
