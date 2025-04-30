@@ -25,8 +25,8 @@ int main(){
   auto controller = std::make_shared<rpc::RpcController>();
   request->set_user_id(1);
   request->set_session_id(1);
-  request->set_api_key("xx");
-
+  request->set_api_key("sk-91d3a22bf7824e4dbc69a8383cd5cebb");
+  std::string token;
   // 创建strand保证顺序执行
   auto strand = boost::asio::make_strand(iox);
   auto channel = rpc::create_rpc_channel("AiServer", iox);
@@ -47,7 +47,7 @@ int main(){
         auto* closure = rpc::RpcClosure::Create(
             [&](){               
               boost::asio::co_spawn(iox,
-                  [=]() -> boost::asio::awaitable<void> {
+                  [=, &token]() -> boost::asio::awaitable<void> {
                       std::cout << "\n=== RPC Callback ===" << std::endl;
                       if (controller->Failed()) {
                           std::cerr << "RPC Failed: " 
@@ -56,6 +56,7 @@ int main(){
                           std::cout << "Respon message is : " 
                                   << response->respon_message() << std::endl;
                       }
+                      token = response->respon_message();
                       co_await rpc_done_channel->async_send(boost::system::error_code{}, boost::asio::use_awaitable);
                       co_return;
                   },
@@ -90,7 +91,7 @@ int main(){
     // 这里可以添加RPC调用逻辑
     std::cout << "Coroutine 2 executed" << std::endl;
 
-
+    query_request->set_token(token);
     AiServer_Stub stub(channel.get());
     auto* closure = rpc::RpcClosure::Create(
       [=](){      

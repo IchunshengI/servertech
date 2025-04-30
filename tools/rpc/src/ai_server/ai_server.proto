@@ -9,7 +9,8 @@ message InitRequest {
 }
 
 message QueryRequest {
-    string query_message = 1;
+    string token = 1;
+    string query_message = 2;
 }
 message GeneralResponse {
     string respon_message = 1;

@@ -219,9 +219,25 @@ class QueryRequest final : public ::google::protobuf::Message
 
   // accessors -------------------------------------------------------
   enum : int {
-    kQueryMessageFieldNumber = 1,
+    kTokenFieldNumber = 1,
+    kQueryMessageFieldNumber = 2,
   };
-  // string query_message = 1;
+  // string token = 1;
+  void clear_token() ;
+  const std::string& token() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_token(Arg_&& arg, Args_... args);
+  std::string* PROTOBUF_NONNULL mutable_token();
+  [[nodiscard]] std::string* PROTOBUF_NULLABLE release_token();
+  void set_allocated_token(std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const std::string& _internal_token() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_token(const std::string& value);
+  std::string* PROTOBUF_NONNULL _internal_mutable_token();
+
+  public:
+  // string query_message = 2;
   void clear_query_message() ;
   const std::string& query_message() const;
   template <typename Arg_ = const std::string&, typename... Args_>
@@ -240,8 +256,8 @@ class QueryRequest final : public ::google::protobuf::Message
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<0, 1,
-                                   0, 34,
+  static const ::google::protobuf::internal::TcParseTable<1, 2,
+                                   0, 39,
                                    2>
       _table_;
 
@@ -262,6 +278,7 @@ class QueryRequest final : public ::google::protobuf::Message
         const QueryRequest& from_msg);
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr token_;
     ::google::protobuf::internal::ArenaStringPtr query_message_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -891,11 +908,76 @@ inline void InitRequest::set_allocated_api_key(std::string* PROTOBUF_NULLABLE va
 
 // QueryRequest
 
-// string query_message = 1;
+// string token = 1;
+inline void QueryRequest::clear_token() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.token_.ClearToEmpty();
+  _impl_._has_bits_[0] &= ~0x00000001u;
+}
+inline const std::string& QueryRequest::token() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:QueryRequest.token)
+  return _internal_token();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void QueryRequest::set_token(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_.token_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:QueryRequest.token)
+}
+inline std::string* PROTOBUF_NONNULL QueryRequest::mutable_token()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_token();
+  // @@protoc_insertion_point(field_mutable:QueryRequest.token)
+  return _s;
+}
+inline const std::string& QueryRequest::_internal_token() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.token_.Get();
+}
+inline void QueryRequest::_internal_set_token(const std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_.token_.Set(value, GetArena());
+}
+inline std::string* PROTOBUF_NONNULL QueryRequest::_internal_mutable_token() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_._has_bits_[0] |= 0x00000001u;
+  return _impl_.token_.Mutable( GetArena());
+}
+inline std::string* PROTOBUF_NULLABLE QueryRequest::release_token() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:QueryRequest.token)
+  if ((_impl_._has_bits_[0] & 0x00000001u) == 0) {
+    return nullptr;
+  }
+  _impl_._has_bits_[0] &= ~0x00000001u;
+  auto* released = _impl_.token_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.token_.Set("", GetArena());
+  }
+  return released;
+}
+inline void QueryRequest::set_allocated_token(std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000001u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000001u;
+  }
+  _impl_.token_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.token_.IsDefault()) {
+    _impl_.token_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:QueryRequest.token)
+}
+
+// string query_message = 2;
 inline void QueryRequest::clear_query_message() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.query_message_.ClearToEmpty();
-  _impl_._has_bits_[0] &= ~0x00000001u;
+  _impl_._has_bits_[0] &= ~0x00000002u;
 }
 inline const std::string& QueryRequest::query_message() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
@@ -905,7 +987,7 @@ inline const std::string& QueryRequest::query_message() const
 template <typename Arg_, typename... Args_>
 PROTOBUF_ALWAYS_INLINE void QueryRequest::set_query_message(Arg_&& arg, Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_._has_bits_[0] |= 0x00000002u;
   _impl_.query_message_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
   // @@protoc_insertion_point(field_set:QueryRequest.query_message)
 }
@@ -921,21 +1003,21 @@ inline const std::string& QueryRequest::_internal_query_message() const {
 }
 inline void QueryRequest::_internal_set_query_message(const std::string& value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_._has_bits_[0] |= 0x00000002u;
   _impl_.query_message_.Set(value, GetArena());
 }
 inline std::string* PROTOBUF_NONNULL QueryRequest::_internal_mutable_query_message() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_._has_bits_[0] |= 0x00000001u;
+  _impl_._has_bits_[0] |= 0x00000002u;
   return _impl_.query_message_.Mutable( GetArena());
 }
 inline std::string* PROTOBUF_NULLABLE QueryRequest::release_query_message() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   // @@protoc_insertion_point(field_release:QueryRequest.query_message)
-  if ((_impl_._has_bits_[0] & 0x00000001u) == 0) {
+  if ((_impl_._has_bits_[0] & 0x00000002u) == 0) {
     return nullptr;
   }
-  _impl_._has_bits_[0] &= ~0x00000001u;
+  _impl_._has_bits_[0] &= ~0x00000002u;
   auto* released = _impl_.query_message_.Release();
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
     _impl_.query_message_.Set("", GetArena());
@@ -945,9 +1027,9 @@ inline std::string* PROTOBUF_NULLABLE QueryRequest::release_query_message() {
 inline void QueryRequest::set_allocated_query_message(std::string* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   if (value != nullptr) {
-    _impl_._has_bits_[0] |= 0x00000001u;
+    _impl_._has_bits_[0] |= 0x00000002u;
   } else {
-    _impl_._has_bits_[0] &= ~0x00000001u;
+    _impl_._has_bits_[0] &= ~0x00000002u;
   }
   _impl_.query_message_.SetAllocated(value, GetArena());
   if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.query_message_.IsDefault()) {

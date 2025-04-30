@@ -64,13 +64,15 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
     iox_,
     [=,this]() -> boost::asio::awaitable<void> {
 
+      /* 进入*/
+      //std::cout << " <<< " << std::endl;
       /* 从redis连接池中取数据 */
       /* 获取连接池中的api_key 和 user_id、session_id等信息 */
 
       std::string query = request->query_message();
       MethodProcess methodProcess(this->iox_);
       methodProcess.Init("dashscope.aliyuncs.com");
-      std::string token = "ai_server_ZmLRrhN+UCpM0jHsSXz4Xw==";
+      std::string token = request->token();
       auto result = co_await redis_client_->GetApiKey(token);
 
       /* 处理apikey的获取结果*/
@@ -84,6 +86,7 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
         }
       } else{
         std::string api_key = result.value();
+        /* 云端服务调用 */
         auto call_result = co_await methodProcess.CallModelByHttps(query, api_key);
         if (call_result.has_error()) {
           LOG("Error") << "CallModelByhttps error : " << call_result.error().message();
