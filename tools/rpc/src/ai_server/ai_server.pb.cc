@@ -28,6 +28,9 @@ namespace _fl = ::google::protobuf::internal::field_layout;
 inline constexpr QueryRequest::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
+        token_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
         query_message_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()) {}
@@ -136,8 +139,10 @@ const ::uint32_t
         ~0u,  // no _inlined_string_donated_
         ~0u,  // no _split_
         ~0u,  // no sizeof(Split)
+        PROTOBUF_FIELD_OFFSET(::QueryRequest, _impl_.token_),
         PROTOBUF_FIELD_OFFSET(::QueryRequest, _impl_.query_message_),
         0,
+        1,
         PROTOBUF_FIELD_OFFSET(::GeneralResponse, _impl_._has_bits_),
         PROTOBUF_FIELD_OFFSET(::GeneralResponse, _internal_metadata_),
         ~0u,  // no _extensions_
@@ -153,8 +158,8 @@ const ::uint32_t
 static const ::_pbi::MigrationSchema
     schemas[] ABSL_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
         {0, 11, -1, sizeof(::InitRequest)},
-        {14, 23, -1, sizeof(::QueryRequest)},
-        {24, 33, -1, sizeof(::GeneralResponse)},
+        {14, 24, -1, sizeof(::QueryRequest)},
+        {26, 35, -1, sizeof(::GeneralResponse)},
 };
 static const ::_pb::Message* PROTOBUF_NONNULL const file_default_instances[] = {
     &::_InitRequest_default_instance_._instance,
@@ -165,18 +170,18 @@ const char descriptor_table_protodef_ai_5fserver_2eproto[] ABSL_ATTRIBUTE_SECTIO
     protodesc_cold) = {
     "\n\017ai_server.proto\"C\n\013InitRequest\022\017\n\007user"
     "_id\030\001 \001(\005\022\022\n\nsession_id\030\002 \001(\005\022\017\n\007api_key"
-    "\030\003 \001(\t\"%\n\014QueryRequest\022\025\n\rquery_message\030"
-    "\001 \001(\t\")\n\017GeneralResponse\022\026\n\016respon_messa"
-    "ge\030\001 \001(\t2c\n\010AiServer\022-\n\013SetInitInfo\022\014.In"
-    "itRequest\032\020.GeneralResponse\022(\n\005Query\022\r.Q"
-    "ueryRequest\032\020.GeneralResponseB\003\200\001\001b\006prot"
-    "o3"
+    "\030\003 \001(\t\"4\n\014QueryRequest\022\r\n\005token\030\001 \001(\t\022\025\n"
+    "\rquery_message\030\002 \001(\t\")\n\017GeneralResponse\022"
+    "\026\n\016respon_message\030\001 \001(\t2c\n\010AiServer\022-\n\013S"
+    "etInitInfo\022\014.InitRequest\032\020.GeneralRespon"
+    "se\022(\n\005Query\022\r.QueryRequest\032\020.GeneralResp"
+    "onseB\003\200\001\001b\006proto3"
 };
 static ::absl::once_flag descriptor_table_ai_5fserver_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_ai_5fserver_2eproto = {
     false,
     false,
-    282,
+    297,
     descriptor_table_protodef_ai_5fserver_2eproto,
     "ai_server.proto",
     &descriptor_table_ai_5fserver_2eproto_once,
@@ -557,6 +562,7 @@ PROTOBUF_NDEBUG_INLINE QueryRequest::Impl_::Impl_(
     const ::QueryRequest& from_msg)
       : _has_bits_{from._has_bits_},
         _cached_size_{0},
+        token_(arena, from.token_),
         query_message_(arena, from.query_message_) {}
 
 QueryRequest::QueryRequest(
@@ -579,6 +585,7 @@ PROTOBUF_NDEBUG_INLINE QueryRequest::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
       : _cached_size_{0},
+        token_(arena),
         query_message_(arena) {}
 
 inline void QueryRequest::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
@@ -592,6 +599,7 @@ inline void QueryRequest::SharedDtor(MessageLite& self) {
   QueryRequest& this_ = static_cast<QueryRequest&>(self);
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.token_.Destroy();
   this_._impl_.query_message_.Destroy();
   this_._impl_.~Impl_();
 }
@@ -638,16 +646,16 @@ const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL QueryRequest::Ge
   return QueryRequest_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<0, 1, 0, 34, 2>
+const ::_pbi::TcParseTable<1, 2, 0, 39, 2>
 QueryRequest::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(QueryRequest, _impl_._has_bits_),
     0, // no _extensions_
-    1, 0,  // max_field_number, fast_idx_mask
+    2, 8,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967294,  // skipmap
+    4294967292,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    1,  // num_field_entries
+    2,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     QueryRequest_class_data_.base(),
@@ -657,20 +665,27 @@ QueryRequest::_table_ = {
     ::_pbi::TcParser::GetTable<::QueryRequest>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // string query_message = 1;
+    // string query_message = 2;
     {::_pbi::TcParser::FastUS1,
-     {10, 0, 0, PROTOBUF_FIELD_OFFSET(QueryRequest, _impl_.query_message_)}},
+     {18, 1, 0, PROTOBUF_FIELD_OFFSET(QueryRequest, _impl_.query_message_)}},
+    // string token = 1;
+    {::_pbi::TcParser::FastUS1,
+     {10, 0, 0, PROTOBUF_FIELD_OFFSET(QueryRequest, _impl_.token_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // string query_message = 1;
-    {PROTOBUF_FIELD_OFFSET(QueryRequest, _impl_.query_message_), _Internal::kHasBitsOffset + 0, 0,
+    // string token = 1;
+    {PROTOBUF_FIELD_OFFSET(QueryRequest, _impl_.token_), _Internal::kHasBitsOffset + 0, 0,
+    (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
+    // string query_message = 2;
+    {PROTOBUF_FIELD_OFFSET(QueryRequest, _impl_.query_message_), _Internal::kHasBitsOffset + 1, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
-    "\14\15\0\0\0\0\0\0"
+    "\14\5\15\0\0\0\0\0"
     "QueryRequest"
+    "token"
     "query_message"
   }},
 };
@@ -682,8 +697,13 @@ PROTOBUF_NOINLINE void QueryRequest::Clear() {
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000001u) != 0) {
-    _impl_.query_message_.ClearNonDefaultToEmpty();
+  if ((cached_has_bits & 0x00000003u) != 0) {
+    if ((cached_has_bits & 0x00000001u) != 0) {
+      _impl_.token_.ClearNonDefaultToEmpty();
+    }
+    if ((cached_has_bits & 0x00000002u) != 0) {
+      _impl_.query_message_.ClearNonDefaultToEmpty();
+    }
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -704,13 +724,23 @@ PROTOBUF_NOINLINE void QueryRequest::Clear() {
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
-  // string query_message = 1;
+  // string token = 1;
   if ((this_._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    if (!this_._internal_token().empty()) {
+      const std::string& _s = this_._internal_token();
+      ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+          _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "QueryRequest.token");
+      target = stream->WriteStringMaybeAliased(1, _s, target);
+    }
+  }
+
+  // string query_message = 2;
+  if ((this_._impl_._has_bits_[0] & 0x00000002u) != 0) {
     if (!this_._internal_query_message().empty()) {
       const std::string& _s = this_._internal_query_message();
       ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
           _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "QueryRequest.query_message");
-      target = stream->WriteStringMaybeAliased(1, _s, target);
+      target = stream->WriteStringMaybeAliased(2, _s, target);
     }
   }
 
@@ -737,10 +767,18 @@ PROTOBUF_NOINLINE void QueryRequest::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void)cached_has_bits;
 
-   {
-    // string query_message = 1;
-    cached_has_bits = this_._impl_._has_bits_[0];
+  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if ((cached_has_bits & 0x00000003u) != 0) {
+    // string token = 1;
     if ((cached_has_bits & 0x00000001u) != 0) {
+      if (!this_._internal_token().empty()) {
+        total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                        this_._internal_token());
+      }
+    }
+    // string query_message = 2;
+    if ((cached_has_bits & 0x00000002u) != 0) {
       if (!this_._internal_query_message().empty()) {
         total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
                                         this_._internal_query_message());
@@ -760,12 +798,23 @@ void QueryRequest::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::go
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if ((cached_has_bits & 0x00000001u) != 0) {
-    if (!from._internal_query_message().empty()) {
-      _this->_internal_set_query_message(from._internal_query_message());
-    } else {
-      if (_this->_impl_.query_message_.IsDefault()) {
-        _this->_internal_set_query_message("");
+  if ((cached_has_bits & 0x00000003u) != 0) {
+    if ((cached_has_bits & 0x00000001u) != 0) {
+      if (!from._internal_token().empty()) {
+        _this->_internal_set_token(from._internal_token());
+      } else {
+        if (_this->_impl_.token_.IsDefault()) {
+          _this->_internal_set_token("");
+        }
+      }
+    }
+    if ((cached_has_bits & 0x00000002u) != 0) {
+      if (!from._internal_query_message().empty()) {
+        _this->_internal_set_query_message(from._internal_query_message());
+      } else {
+        if (_this->_impl_.query_message_.IsDefault()) {
+          _this->_internal_set_query_message("");
+        }
       }
     }
   }
@@ -787,6 +836,7 @@ void QueryRequest::InternalSwap(QueryRequest* PROTOBUF_RESTRICT PROTOBUF_NONNULL
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.token_, &other->_impl_.token_, arena);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.query_message_, &other->_impl_.query_message_, arena);
 }
 

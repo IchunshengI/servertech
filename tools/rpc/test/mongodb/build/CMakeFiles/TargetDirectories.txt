@@ -1,0 +1,3 @@
+/home/tlx/project/servertech-chat/tools/rpc/test/mongodb/build/CMakeFiles/mongo_test.dir
+/home/tlx/project/servertech-chat/tools/rpc/test/mongodb/build/CMakeFiles/edit_cache.dir
+/home/tlx/project/servertech-chat/tools/rpc/test/mongodb/build/CMakeFiles/rebuild_cache.dir
