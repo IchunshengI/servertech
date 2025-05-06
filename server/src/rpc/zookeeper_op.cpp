@@ -1,7 +1,7 @@
 #include <semaphore.h>
 #include <zookeeper/zookeeper.h>
-#include "zookeeper_op.h"
-#include "config/config.h"
+#include "rpc/zookeeper_op.h"
+#include "rpc/config/config.h"
 #include "log/logger_wrapper.h"
 
 namespace rpc {

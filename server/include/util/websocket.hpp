@@ -13,7 +13,8 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/string_body.hpp>
-
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/use_awaitable.hpp>
 #include <memory>
 #include <string_view>
 
@@ -30,7 +31,11 @@ class websocket
     std::unique_ptr<impl> impl_;
     
     error_code write_locked_impl(std::string_view buff, boost::asio::yield_context yield);
+    boost::asio::awaitable<void> write_locked_impl(std::string_view buff);
+
+
     void lock_writes_impl(boost::asio::yield_context yield) noexcept;
+    boost::asio::awaitable<void> lock_writes_impl() noexcept;
     void unlock_writes_impl() noexcept;
     
     struct write_guard_deleter
@@ -68,6 +73,7 @@ public:
     // concurrent writes can be issued safely against the same websocket.
     // A write is roughly equivalent to lock_writes() + write_locked() + releasing the guard
     error_code write(std::string_view buff, boost::asio::yield_context yield);
+    boost::asio::awaitable<void> write(std::string_view message);
 
     // Locks writes until the returned guard is destroyed. Other coroutines
     // calling write will be suspended until the guard is released.
@@ -76,6 +82,12 @@ public:
     {
         lock_writes_impl(yield);
         return write_guard(this);
+    }
+
+    boost::asio::awaitable<write_guard> lock_writes()
+    {
+      co_await lock_writes_impl();
+      co_return write_guard(this);
     }
 
     // Writes bypassing the write lock. lock_writes() must have been called
@@ -88,6 +100,12 @@ public:
     {
         assert(guard.get() != nullptr);
         return write_locked_impl(buff, yield);
+    }
+
+    boost::asio::awaitable<void> write_locked(std::string_view buff, [[maybe_unused]] write_guard& guard)
+    {
+      co_await write_locked_impl(buff);
+      co_return;
     }
 
     // Closes the websocket, sending close_code to the client.

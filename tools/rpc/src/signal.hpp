@@ -75,7 +75,7 @@ private:
 /* 
 
 声明
-auto signal = std::make_shared<SimpleSignal>(iox.get_executor());
+auto signal = std::make_shared<SimpleSignal>(ex.get_executor());
 调用测
 signal->signal();
 

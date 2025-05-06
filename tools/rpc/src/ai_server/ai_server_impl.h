@@ -16,7 +16,7 @@ class AiServerImpl : public AiServer,
                      public std::enable_shared_from_this<AiServerImpl>
 {
  public:
-  AiServerImpl(boost::asio::io_context& iox);
+  AiServerImpl(boost::asio::any_io_executor ex);
   ~AiServerImpl();
 
   // 设置初始化消息
@@ -33,7 +33,7 @@ class AiServerImpl : public AiServer,
 
 
  private:
-  boost::asio::io_context& iox_;
+  boost::asio::any_io_executor ex_;
   std::shared_ptr<RedisClient> redis_client_;
   
 }; // namespace chat

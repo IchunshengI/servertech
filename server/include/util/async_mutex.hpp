@@ -9,8 +9,10 @@
 #define SERVERTECHCHAT_SERVER_INCLUDE_UTIL_ASYNC_MUTEX_HPP
 
 #include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/awaitable.hpp>
 #include <boost/asio/experimental/channel.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/asio/use_awaitable.hpp>
 
 #include <cassert>
 #include <deque>
@@ -65,6 +67,15 @@ public:
 
         // Mark as locked
         locked_ = true;
+    }
+
+    boost::asio::awaitable<void> lock()
+    {
+      while(locked_)
+      {
+        co_await chan_.async_receive(boost::asio::use_awaitable);
+      }
+      locked_ = true;
     }
 
     // Try to acquire without suspending

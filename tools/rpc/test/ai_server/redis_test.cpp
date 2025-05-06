@@ -17,7 +17,7 @@ int main(){
   /* 
     redis 存值测试
  */
-  auto redis_pool = chat::create_redis_pool(iox);
+  auto redis_pool = chat::create_redis_pool(iox.get_executor());
   boost::asio::co_spawn(
     iox,
     [&]() -> boost::asio::awaitable<void> {

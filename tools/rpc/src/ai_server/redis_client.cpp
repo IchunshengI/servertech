@@ -11,8 +11,8 @@ using boost::asio::awaitable;
 using chat::LOG;
 using rpc::error_with_message;
 
-RedisClient::RedisClient(boost::asio::io_context&iox) : iox_(iox){
-  redis_pool_ = create_redis_pool(iox);
+RedisClient::RedisClient(boost::asio::any_io_executor ex) : ex_(ex){
+  redis_pool_ = create_redis_pool(ex);
 }
 
 RedisClient::~RedisClient()

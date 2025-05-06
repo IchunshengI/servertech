@@ -18,7 +18,7 @@ friend class LogPersister;
 public:
 
     //static Logger& instance();
-    Logger(boost::asio::io_context& io_context, size_t time, std::string file_path, size_t file_size, size_t default_buffer_size = 8192);
+    Logger(boost::asio::any_io_executor io_context, size_t time, std::string file_path, size_t file_size, size_t default_buffer_size = 8192);
     void append(const std::string log); 
     RingBuffer* getBufferPtr();
     LogStream operator()(const char*);   
@@ -28,7 +28,7 @@ private:
     void TimerCallBack(); 
 
     /* 后端写入组件 */
-    boost::asio::io_context& io_context_;   /* 日志系统中异步操作使用的上下文 */
+    boost::asio::any_io_executor io_context_;   /* 日志系统中异步操作使用的上下文 */
     boost::asio::steady_timer steady_timer_; /* 异步操作定时器 */
     LogPersister* logPersister_;
     size_t time_;                           /* 定时时间*/

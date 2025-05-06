@@ -10,9 +10,9 @@ using chat::LOG;
 int main(){
 
   boost::asio::io_context iox;
-  auto rpc_server_ptr = rpc::create_rpc_server(iox);
+  auto rpc_server_ptr = rpc::create_rpc_server(iox.get_executor());
   chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
-  AiServerImpl* ai_server_ptr = new AiServerImpl(iox);
+  AiServerImpl* ai_server_ptr = new AiServerImpl(iox.get_executor());
   if(!rpc_server_ptr->RegisterService(ai_server_ptr)){
     LOG("Error") << "rpc registerServer error";
     return -1;

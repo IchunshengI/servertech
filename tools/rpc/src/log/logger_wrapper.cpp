@@ -21,7 +21,7 @@ static std::unique_ptr<Logger> logger_ptr = nullptr;
         10 * 1024 * 1024,           // 日志文件大小 (10MB)
         8192                        // 8kb
 */
-void InitLogger(boost::asio::io_context& io_context, size_t time, std::string file_path, size_t file_size, size_t default_buffer_size){
+void InitLogger(boost::asio::any_io_executor io_context, size_t time, std::string file_path, size_t file_size, size_t default_buffer_size){
     //static std::once_flag init_flag;
    
     // std::signal(SIGINT, handle_signal);

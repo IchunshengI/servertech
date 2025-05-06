@@ -141,8 +141,8 @@ using channel_t = boost::asio::experimental::channel<void(boost::system::error_c
 int main(){
 
   boost::asio::io_context iox;
-  chat::RpcClient rpc_client(iox);
-  chat::InitLogger(iox);
+  chat::RpcClient rpc_client(iox.get_executor());
+  chat::InitLogger(iox.get_executor());
   chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
 
   boost::asio::co_spawn(iox,

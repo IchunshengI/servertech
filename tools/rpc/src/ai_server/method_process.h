@@ -27,7 +27,7 @@ using rpc::error_with_message;
 /* 服务方法的具体操作类 */
 class MethodProcess{
  public:
-  MethodProcess(boost::asio::io_context&);
+  MethodProcess(boost::asio::any_io_executor);
   ~MethodProcess();
 
   /* 这里应该是一个协程函数,返回结果的话应该是解析后的字符串,这里到时候测试一下RVO */
@@ -61,7 +61,7 @@ class MethodProcess{
                                             boost::asio::streambuf&,
                                             boost::asio::ssl::stream<boost::asio::ip::tcp::socket>&
                                             );                                                                                                
-  boost::asio::io_context& iox_;
+  boost::asio::any_io_executor ex_;
   boost::asio::ssl::context ssl_ctx_;        /* ssl 上下文*/
   std::string remote_address_;               /* 服务端地址 */
 }; // namespace chat

@@ -3,7 +3,7 @@
   Author	:	chunsheng
   Brief		:	客户端调用channel的具体实现类
 */
-#include "rpc_channel.h"
+#include "rpc/rpc_channel.h"
 #include <boost/asio.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/use_awaitable.hpp>
@@ -11,17 +11,17 @@
 #include <boost/system/error_code.hpp>
 #include <boost/system/system_error.hpp>
 #include <coroutine> 
-#include "result_with_message.h"
+#include "rpc/result_with_message.h"
 #include "log/logger_wrapper.h"
 #include "google/protobuf/message.h"
-#include "rpc_meta.pb.h"
-#include "zookeeper_op.h"
+#include "rpc/rpc_meta.pb.h"
+#include "rpc/zookeeper_op.h"
 namespace rpc{
 
 //using chat::LOG;
 class RpcChannelImp : public RpcChannel{
  public:
-  RpcChannelImp(std::string server_name, boost::asio::io_context& iox) : server_name_(server_name), iox_(iox), socket_(iox) {
+  RpcChannelImp(std::string server_name, boost::asio::any_io_executor ex) : server_name_(server_name), ex_(ex), socket_(ex) {
   }
   ~RpcChannelImp () override{
 #ifdef DEBUG_INFO  
@@ -66,7 +66,7 @@ class RpcChannelImp : public RpcChannel{
       serialzied_str += rpc_meta_str;
       serialzied_str += request_data_str;     
 
-      boost::asio::co_spawn(iox_,
+      boost::asio::co_spawn(ex_,
                             [this, send_data= std::move(serialzied_str), response,done] () -> boost::asio::awaitable<void> {
                                /* 挂起点,等待 */
                                auto ec = co_await Handle_write_recv(send_data,response); 
@@ -142,7 +142,7 @@ class RpcChannelImp : public RpcChannel{
 
     /* 解析端点 */
     //boost::system::error_code ec;
-    boost::asio::ip::tcp::resolver resolver(iox_);
+    boost::asio::ip::tcp::resolver resolver(ex_);
     auto endpoints = co_await resolver.async_resolve(ip, 
                                                                                   port,
                                                                                   boost::asio::redirect_error(boost::asio::use_awaitable,ec)
@@ -212,12 +212,12 @@ class RpcChannelImp : public RpcChannel{
   }
 
   std::string server_name_;
-  boost::asio::io_context& iox_;
+  boost::asio::any_io_executor ex_;
   boost::asio::ip::tcp::socket socket_;
 
 };
 
-std::shared_ptr<RpcChannel> create_rpc_channel(std::string server_name, boost::asio::io_context& iox){
-  return std::make_shared<RpcChannelImp>(std::move(server_name), iox);
+std::shared_ptr<RpcChannel> create_rpc_channel(std::string server_name, boost::asio::any_io_executor ex){
+  return std::make_shared<RpcChannelImp>(std::move(server_name), ex);
 }
 } // namespace rpc

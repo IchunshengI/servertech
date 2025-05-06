@@ -5,7 +5,7 @@
 
 namespace chat{
 
-Logger::Logger(boost::asio::io_context& io_context, 
+Logger::Logger(boost::asio::any_io_executor io_context, 
                size_t time, 
                std::string file_path,
                size_t file_size, 

@@ -8,9 +8,9 @@
 #include "method_process.h"
 #include "redis_client.h"
 namespace chat{
-AiServerImpl::AiServerImpl(boost::asio::io_context& iox) : iox_(iox)
+AiServerImpl::AiServerImpl(boost::asio::any_io_executor ex) : ex_(ex)
 {
-  redis_client_ = CreateRedisClient(iox);
+  redis_client_ = CreateRedisClient(ex);
 }
 AiServerImpl::~AiServerImpl(){
 
@@ -23,7 +23,7 @@ void AiServerImpl::SetInitInfo(::google::protobuf::RpcController* controller,
                 ::google::protobuf::Closure* done
                 )
 {
-  boost::asio::co_spawn(iox_,[=,this]()-> boost::asio::awaitable<void> {
+  boost::asio::co_spawn(ex_,[=,this]()-> boost::asio::awaitable<void> {
     
     SessionInfo info;
     info.user_id_ = request->user_id();
@@ -61,11 +61,11 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
             )
 {
   boost::asio::co_spawn(
-    iox_,
+    ex_,
     [=,this]() -> boost::asio::awaitable<void> {
 
       std::string query = request->query_message();
-      MethodProcess methodProcess(this->iox_);
+      MethodProcess methodProcess(this->ex_);
       methodProcess.Init("dashscope.aliyuncs.com");
       std::string token = request->token();
       auto result = co_await redis_client_->GetApiKey(token);
@@ -102,9 +102,9 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
     );
 } 
 
-std::unique_ptr<RedisClient> CreateRedisClient(boost::asio::io_context& iox)
+std::unique_ptr<RedisClient> CreateRedisClient(boost::asio::any_io_executor ex)
 {
-  return std::make_unique<RedisClient>(iox);
+  return std::make_unique<RedisClient>(ex);
 }
 } // namespace chat
   

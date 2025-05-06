@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     // 初始化ASIO
     boost::asio::io_context iox;
     /* 初始化日志 */
-    chat::InitLogger(iox);
+    chat::InitLogger(iox.get_executor());
     // 这个操作应该放在全局的初始化函数中
     chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg"); /* */
     // 使用智能指针管理核心对象
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
     // 创建RPC通道（改为shared_ptr）
     //const std::string addr = std::string(argv[1]) + ":" + argv[2];
-    auto channel = rpc::create_rpc_channel("DemoService", iox); 
+    auto channel = rpc::create_rpc_channel("DemoService", iox.get_executor()); 
 
     // 启动异步调用协程（修复捕获方式）
     boost::asio::co_spawn(iox,

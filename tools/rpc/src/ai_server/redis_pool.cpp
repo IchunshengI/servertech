@@ -17,8 +17,8 @@ using rpc::error_with_message;
 using connection_type = boost::redis::connection;
 using chat::LOG;
 
-RedisPool::RedisPool(boost::asio::io_context& iox, RedisPoolConfig redis_pool_config) : iox_(iox), closed_(false),
-                     timer_(iox),
+RedisPool::RedisPool(boost::asio::any_io_executor ex, RedisPoolConfig redis_pool_config) : ex_(ex), closed_(false),
+                     timer_(ex),
                      redis_pool_config_(std::move(redis_pool_config))
 {
 
@@ -74,7 +74,7 @@ void RedisPool::StartMaintenance()
   timer_.async_wait([this](boost::system::error_code ec){
     if (!ec && this->closed_.load()){
 
-      boost::asio::co_spawn(iox_, [this]() -> boost::asio::awaitable<void>{
+      boost::asio::co_spawn(ex_, [this]() -> boost::asio::awaitable<void>{
         co_await this->RunMaintenance();
         this->StartMaintenance();
         co_return;
@@ -125,10 +125,10 @@ awaitable<error_with_message> RedisPool::CreateNewConnection()
 
   /* 这里必须延迟释放，不然后台线程--> boost这里是异步启动，有个后台线程用到了这块内存 */
   std::shared_ptr<connection_type> conn = std::shared_ptr<connection_type>(
-    new connection_type(iox_),
+    new connection_type(ex_),
     [&](connection_type* p) {
       p->cancel();
-      boost::asio::post(iox_, [p]() {
+      boost::asio::post(ex_, [p]() {
         delete p;
       });
     }
@@ -200,10 +200,10 @@ void RedisPool::Close()
 /*
   创建唯一实例 
 */
-std::unique_ptr<RedisPool> create_redis_pool(boost::asio::io_context& iox)
+std::unique_ptr<RedisPool> create_redis_pool(boost::asio::any_io_executor ex)
 {
   RedisPool::RedisPoolConfig redis_cfg("");
-  return std::make_unique<RedisPool>(iox, std::move(redis_cfg));
+  return std::make_unique<RedisPool>(ex, std::move(redis_cfg));
 }
 
 }; /* namespace chat */

@@ -1,6 +1,6 @@
 #include <istream>
 #include <string>
-#include "config.h"
+#include "rpc/config/config.h"
 #include <iostream>
 #include <fstream>
 namespace chat{

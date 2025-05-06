@@ -23,7 +23,7 @@
 namespace chat{
 
 
-MethodProcess::MethodProcess(boost::asio::io_context& iox) : iox_(iox), ssl_ctx_(boost::asio::ssl::context::sslv23)
+MethodProcess::MethodProcess(boost::asio::any_io_executor ex) : ex_(ex), ssl_ctx_(boost::asio::ssl::context::sslv23)
 {
 
 }
@@ -37,7 +37,7 @@ MethodProcess::~MethodProcess()
 void MethodProcess::Init(std::string remote_address)
 {
  // ip::tcp::resolver::query query(remote_address, "https");
-  // ip::tcp::resolver resolver(iox_);
+  // ip::tcp::resolver resolver(ex_);
   // endpoint_it_ = resolver.resolve(query);
   ssl_ctx_.set_default_verify_paths(); 
   ssl_ctx_.set_verify_mode(boost::asio::ssl::verify_peer);
@@ -54,11 +54,11 @@ boost::asio::awaitable<result_with_message<std::string>> MethodProcess::CallMode
   
   boost::system::error_code ec;
   ip::tcp::resolver::query query(remote_address_, "https");
-  ip::tcp::resolver resolver(iox_);
+  ip::tcp::resolver resolver(ex_);
   ip::tcp::resolver::iterator endpoint_it_ = resolver.resolve(query);;  /* 连接端点 */
   /* 1. 建立TCP连接 */
 
-  boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_stream(iox_, ssl_ctx_);
+  boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_stream(ex_, ssl_ctx_);
   co_await boost::asio::async_connect(ssl_stream.next_layer(),  /* 获取底层TCP socket */
                                       endpoint_it_,
                                       boost::asio::redirect_error(boost::asio::use_awaitable,ec)

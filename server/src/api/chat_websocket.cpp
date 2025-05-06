@@ -6,7 +6,10 @@
 //
 
 #include "api/chat_websocket.hpp"
-
+#include <boost/asio.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/beast/core/stream_traits.hpp>
 #include <boost/beast/websocket/rfc6455.hpp>
@@ -31,6 +34,7 @@
 #include "shared_state.hpp"
 #include "util/websocket.hpp"
 #include <boost/beast/websocket/error.hpp>
+#include "rpc/rpc_client.h"
 using namespace chat;
 
 namespace {
@@ -195,7 +199,7 @@ struct event_handler_visitor
         std::vector<message> msgs;
         msgs.reserve(evt.messages.size());
         
-
+      
 
         
         std::cout << "\n\nsession id is : " << evt.sessionId << std::endl;
@@ -209,40 +213,83 @@ struct event_handler_visitor
                 current_user.id,
             });
         }
-
-        /* 这里目前只判断一条 */
+       
        auto query = msgs[0].content;
-       /* 这里直接挂起这个协程吧？重新起一条协程去执行rpc远程调用？然后执行完的话就恢复这个协程 */
-       /* 挂起这个协程的话，接收怎么办？ */
-       /* 直接起一个协程,无栈协程去执行rpc */
-       /* 获取返回结果后，再起一个有栈协程*/
-      static const user k_root_user{0, "Root"};
-      static int count = 1;
-      std::string content = "hello " + std::to_string(count);
-      std::cout << content << std::endl;
-      count++;
-      message msg{
-          "",                      // 空 ID（可选，如果 Redis 分配就留空）
-          std::move(content),       // 消息内容
-          timestamp_t::clock::now(), // 当前时间戳
-          k_root_user.id           // user_id 是 Root（固定为 0）
-      };
-      // 3. 组织为一个 vector，传 span
-      std::vector<message> messages;
-      messages.clear();
-      messages.push_back(std::move(msg));
+       std::shared_ptr<websocket> ws_prt(&ws,[](websocket*){}); // 只是单纯使用引用，不释放真正的内存
+       std::string session_id = evt.sessionId;
+       //websocket& socket    = ws; 
+       boost::asio::co_spawn(ws.get_executor(), [ws_prt,query, session_id]()-> boost::asio::awaitable<void>
+       {
 
-      // 4. 构造 event
-      server_update_session_event send_evt{
-          .session_id = evt.sessionId,  // 你要发给哪个 session
-          .sending_user = k_root_user,
-          .messages = messages              // 用 span 传进去
-      };
 
-      // 5. 序列化为 JSON
-      std::string json = send_evt.to_json();
-      //std::string ddd = "dada";
-      ws.write(json, yield);
+          rpc::RpcClient rpc_client(ws_prt->get_executor());
+          co_await rpc_client.SetInitInfo(1,1,"sk-91d3a22bf7824e4dbc69a8383cd5cebb");
+          auto result = co_await rpc_client.Query("rpc是什么？");
+           if (result.has_error()){
+              std::cerr << "错误 !" << std::endl;
+              co_return;
+           }
+          static const user k_root_user{0, " 陆零妖哔"};
+          message msg{
+              "",                      // 空 ID（可选，如果 Redis 分配就留空）
+              std::move(result.value()),       // 消息内容
+              timestamp_t::clock::now(), // 当前时间戳
+              k_root_user.id           // user_id 是 Root（固定为 0）
+          };
+
+                    // 3. 组织为一个 vector，传 span
+          std::vector<message> messages;
+          messages.clear();
+          messages.push_back(std::move(msg));
+
+          // 4. 构造 event
+          server_update_session_event send_evt{
+              .session_id = session_id,  // 你要发给哪个 session
+              .sending_user = k_root_user,
+              .messages = messages              // 用 span 传进去
+          };
+
+          // // 5. 序列化为 JSON
+          std::string json = send_evt.to_json();
+          // //std::string ddd = "dada";
+          co_await ws_prt->write(json);
+          co_return;
+       },
+       boost::asio::detached
+       );
+        /* 这里目前只判断一条 */
+      //  auto query = msgs[0].content;
+      //  /* 这里直接挂起这个协程吧？重新起一条协程去执行rpc远程调用？然后执行完的话就恢复这个协程 */
+      //  /* 挂起这个协程的话，接收怎么办？ */
+      //  /* 直接起一个协程,无栈协程去执行rpc */
+      //  /* 获取返回结果后，再起一个有栈协程*/
+      // static const user k_root_user{0, "Root"};
+      // static int count = 1;
+      // std::string content = "hello " + std::to_string(count);
+      // std::cout << content << std::endl;
+      // count++;
+      // message msg{
+      //     "",                      // 空 ID（可选，如果 Redis 分配就留空）
+      //     std::move(content),       // 消息内容
+      //     timestamp_t::clock::now(), // 当前时间戳
+      //     k_root_user.id           // user_id 是 Root（固定为 0）
+      // };
+      // // 3. 组织为一个 vector，传 span
+      // std::vector<message> messages;
+      // messages.clear();
+      // messages.push_back(std::move(msg));
+
+      // // 4. 构造 event
+      // server_update_session_event send_evt{
+      //     .session_id = evt.sessionId,  // 你要发给哪个 session
+      //     .sending_user = k_root_user,
+      //     .messages = messages              // 用 span 传进去
+      // };
+
+      // // 5. 序列化为 JSON
+      // std::string json = send_evt.to_json();
+      // //std::string ddd = "dada";
+      // ws.write(json, yield);
         return {};
     }
 

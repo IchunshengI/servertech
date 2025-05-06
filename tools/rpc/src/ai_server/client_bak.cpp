@@ -16,8 +16,8 @@
 using channel_t = boost::asio::experimental::channel<void(boost::system::error_code)>;
 int main(){
 
-  boost::asio::io_context iox;
-  chat::InitLogger(iox);
+  boost::asio::io_context ex;
+  chat::InitLogger(ex);
   chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/zoo.cfg");
 
   auto request = std::make_shared<InitRequest>();
@@ -28,10 +28,10 @@ int main(){
   request->set_api_key("sk-13791da59b264b5eb778cae83765878c");
 
   // 创建strand保证顺序执行
-  auto strand = boost::asio::make_strand(iox);
-  auto channel = rpc::create_rpc_channel("AiServer", iox);
+  auto strand = boost::asio::make_strand(ex);
+  auto channel = rpc::create_rpc_channel("AiServer", ex);
   auto rpc_done_channel = std::make_shared<channel_t>(strand, 1);
-  boost::asio::co_spawn(iox,
+  boost::asio::co_spawn(ex,
     [&]() -> boost::asio::awaitable<void> {
         
         auto error = co_await channel->Start();
@@ -46,7 +46,7 @@ int main(){
         // 创建闭包
         auto* closure = rpc::RpcClosure::Create(
             [&](){               
-              boost::asio::co_spawn(iox,
+              boost::asio::co_spawn(ex,
                   [=]() -> boost::asio::awaitable<void> {
                       std::cout << "\n=== RPC Callback ===" << std::endl;
                       if (controller->Failed()) {
@@ -80,7 +80,7 @@ int main(){
   auto query_response = std::make_shared<GeneralResponse>();
 
   query_request->set_query_message("rpc是什么? 计算机领域");
-  boost::asio::co_spawn(iox,[&]() -> boost::asio::awaitable<void> 
+  boost::asio::co_spawn(ex,[&]() -> boost::asio::awaitable<void> 
   {
     // 等待前一个协程完成
       // 等待通道信号（异步阻塞）
@@ -113,7 +113,7 @@ int main(){
   // 运行事件循环
   std::cout << "Starting IO context..." << std::endl;
   try {
-      iox.run();
+      ex.run();
       std::cout << "IO context exited normally" << std::endl;
   } catch (const std::exception& e) {
       std::cerr << "IO context error: " << e.what() << std::endl;

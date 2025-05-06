@@ -96,6 +96,7 @@ add_library(
     src/rpc/rpc_channel.cpp 
     src/rpc/rpc_client.cpp
     src/rpc/zookeeper_op.cpp
+    src/rpc/config/config.cpp
 
 )
 

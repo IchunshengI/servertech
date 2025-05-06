@@ -10,7 +10,7 @@ using chat::MethodProcess;
 int main(){
 
   boost::asio::io_context iox;
-  MethodProcess methodProcess(iox);
+  MethodProcess methodProcess(iox.get_executor());
   methodProcess.Init("dashscope.aliyuncs.com");
   std::string api_key = "sk-13791da59b264b5eb778cae83765878c";
   std::string query = "rpc是什么？";

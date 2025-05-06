@@ -22,9 +22,9 @@ using chat::LOG;
 class RpcServerImpl final : public RpcServer
 {
  public:
-  RpcServerImpl(boost::asio::io_context& iox) : iox_(iox)
+  RpcServerImpl(boost::asio::any_io_executor ex) : ex_(ex)
   {
-		chat::InitLogger(iox_);
+		chat::InitLogger(ex_);
   }
 
   ~RpcServerImpl() 
@@ -278,7 +278,7 @@ class RpcServerImpl final : public RpcServer
 
 	}
 
- 	boost::asio::io_context& iox_; /* 协程上下文 */
+ 	boost::asio::any_io_executor ex_; /* 协程上下文 */
   std::string server_addr_;
   struct ServiceInfo { /* 单个服务的信息单元 */
     google::protobuf::Service* service_;
@@ -287,9 +287,9 @@ class RpcServerImpl final : public RpcServer
   std::map<std::string, ServiceInfo> services_; /* 映射多个服务 */
 };
 
-std::unique_ptr<RpcServer> create_rpc_server(boost::asio::io_context& iox){
+std::unique_ptr<RpcServer> create_rpc_server(boost::asio::any_io_executor ex){
 
-  return std::make_unique<RpcServerImpl>(iox);
+  return std::make_unique<RpcServerImpl>(ex);
 }
 
 } // namespace rpc

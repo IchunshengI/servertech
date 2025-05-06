@@ -17,6 +17,7 @@
 #include "services/redis_client.hpp"
 #include "shared_state.hpp"
 #include "log/logger_wrapper.h"
+#include "rpc/config/config.h"
 #include <thread>
 using namespace chat;
 
@@ -43,6 +44,7 @@ int main(int argc, char* argv[])
     boost::asio::io_context ioc{1}; /* 异步运行时环境*/
 
     chat::InitLogger(ioc);
+    chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
     LOG("DEBUG") << "Success Init";
 
     // Singleton objects shared by all connections 所有连接的单例控制对象

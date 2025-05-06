@@ -13,7 +13,8 @@
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/websocket/rfc6455.hpp>
 #include <boost/beast/websocket/stream.hpp>
-
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/use_awaitable.hpp>
 #include <deque>
 #include <memory>
 #include <string_view>
@@ -161,6 +162,12 @@ error_code websocket::write_locked_impl(std::string_view buff, boost::asio::yiel
     return ec;
 }
 
+boost::asio::awaitable<void> websocket::write_locked_impl(std::string_view buff)
+{
+  co_await impl_->ws.async_write(boost::asio::buffer(buff), boost::asio::use_awaitable);
+  co_return;
+}
+
 error_code websocket::write(std::string_view message, boost::asio::yield_context yield)
 {
     // Wait for the connection to become iddle
@@ -169,8 +176,20 @@ error_code websocket::write(std::string_view message, boost::asio::yield_context
     // Write
     return write_locked(message, guard, yield);
 }
+boost::asio::awaitable<void> websocket::write(std::string_view message)
+{
+  auto guard = co_await lock_writes();
+  co_await write_locked(message, guard);
+  //co_await write_locked();
+  co_return;
+}
 
 void websocket::lock_writes_impl(boost::asio::yield_context yield) noexcept { impl_->write_mtx_.lock(yield); }
+
+boost::asio::awaitable<void> websocket::lock_writes_impl() noexcept {
+  co_await impl_->write_mtx_.lock();
+  co_return;
+}
 
 void websocket::unlock_writes_impl() noexcept { impl_->write_mtx_.unlock(); }
 

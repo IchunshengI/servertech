@@ -1,16 +1,16 @@
 #include <cstdint>
 #include <memory>
 #include "log/logger_wrapper.h"
-#include "result_with_message.h"
-#include "rpc_client.h"
-#include "ai_server.pb.h"
-#include "rpc_closure.h"
-#include "signal.h"
-namespace chat{
+#include "rpc/result_with_message.h"
+#include "rpc/rpc_client.h"
+#include "rpc/ai_server.pb.h"
+#include "rpc/rpc_closure.h"
+#include "rpc/signal.h"
+namespace rpc{
 
-RpcClient::RpcClient(boost::asio::io_context& iox) : iox_(iox)
+RpcClient::RpcClient(boost::asio::any_io_executor ex) : ex_(ex)
 {
-  channel_ = rpc::create_rpc_channel("AiServer", iox_);
+  channel_ = rpc::create_rpc_channel("AiServer", ex_);
   controller_ = std::make_shared<RpcController>();
   ai_server_stub_ = std::make_shared<AiServer_Stub>(channel_.get());
 }
@@ -35,7 +35,7 @@ awaitable<bool> RpcClient::SetInitInfo(uint32_t user_id, uint32_t session_id, st
     co_return false;
   }
   
-  auto signal = std::make_shared<SimpleSignal>(iox_.get_executor());
+  auto signal = std::make_shared<SimpleSignal>(ex_);
 
   auto* closure = rpc::RpcClosure::Create(
     [&](){               
@@ -73,7 +73,7 @@ awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
 
   AiServer_Stub stub(channel_.get());
 
-  auto signal = std::make_shared<SimpleSignal>(iox_.get_executor());
+  auto signal = std::make_shared<SimpleSignal>(ex_);
   auto* closure = rpc::RpcClosure::Create(
     [&]() {
       if (controller_->Failed()) {

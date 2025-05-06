@@ -25,7 +25,7 @@ class RpcChannel : public google::protobuf::RpcChannel{
   virtual boost::asio::awaitable<error_with_message> Start() = 0;                        
 };
 
-std::shared_ptr<RpcChannel> create_rpc_channel(std::string, boost::asio::io_context&);
+std::shared_ptr<RpcChannel> create_rpc_channel(std::string, boost::asio::any_io_executor);
 
 } // namespace rpc
 

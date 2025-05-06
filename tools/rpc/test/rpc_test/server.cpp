@@ -17,7 +17,7 @@
 // #include "result_with_message.h"
 class DemoServiceImpl : public DemoService, public std::enable_shared_from_this<DemoServiceImpl>{
  public:
-  DemoServiceImpl(boost::asio::io_context& iox) : iox_(iox){}
+  DemoServiceImpl(boost::asio::any_io_executor iox) : iox_(iox){}
   virtual ~DemoServiceImpl() {}
 
   // 原有方法：返回 SKT-L6505
@@ -71,17 +71,17 @@ class DemoServiceImpl : public DemoService, public std::enable_shared_from_this<
       done->Run();
   }
  private:
-  boost::asio::io_context& iox_;
+  boost::asio::any_io_executor iox_;
 };
 
 int main()
 {
   boost::asio::io_context iox;
   chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
-  auto rpc_server_ptr = rpc::create_rpc_server(iox);
+  auto rpc_server_ptr = rpc::create_rpc_server(iox.get_executor());
 
   //DemoService* demoService = new DemoServiceImpl(iox);
-  auto demoService = std::make_shared<DemoServiceImpl>(iox); 
+  auto demoService = std::make_shared<DemoServiceImpl>(iox.get_executor()); 
   if (!rpc_server_ptr->RegisterService(demoService.get())){
     std::cout << "register service failed" << std::endl;
     return -1;

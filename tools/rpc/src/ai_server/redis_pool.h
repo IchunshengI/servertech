@@ -48,7 +48,7 @@ public:
     boost::redis::config redis_cfg_;               /* redis的连接配置 */
   }; /* RedisPoolConfig */
 
-  RedisPool(boost::asio::io_context& iox, RedisPoolConfig redis_pool_config);
+  RedisPool(boost::asio::any_io_executor ex, RedisPoolConfig redis_pool_config);
   ~RedisPool();
   void ReturnConnection(std::shared_ptr<connection_type>);
   awaitable<void> Init();
@@ -65,7 +65,7 @@ private:
     std::chrono::steady_clock::time_point last_used;
   };
   std::mutex mutex_;
-  boost::asio::io_context& iox_;
+  boost::asio::any_io_executor ex_;
   RedisPoolConfig redis_pool_config_;
   boost::asio::steady_timer timer_;
   std::atomic<int> total_count_;
@@ -114,6 +114,6 @@ private:
   RedisPool* redis_pool_ptr_;
 };
 
-std::unique_ptr<RedisPool> create_redis_pool(boost::asio::io_context& iox);
+std::unique_ptr<RedisPool> create_redis_pool(boost::asio::any_io_executor ex);
 
 }; /* namespace chat */

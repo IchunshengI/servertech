@@ -27,7 +27,7 @@ struct SessionInfo{
 
 class RedisClient{
 public:
-  RedisClient(boost::asio::io_context&);
+  RedisClient(boost::asio::any_io_executor);
   ~RedisClient();
 
   /* 传递初始信息并返回生成的session */
@@ -35,10 +35,10 @@ public:
   awaitable<result_with_message<std::string>> GetApiKey(std::string& session_token);
 private:
   static std::string GetRedisKey(std::string_view session);
-  boost::asio::io_context& iox_;
+  boost::asio::any_io_executor ex_;
   std::unique_ptr<RedisPool> redis_pool_;
 };
 
-std::unique_ptr<RedisClient> CreateRedisClient(boost::asio::io_context& iox);
+std::unique_ptr<RedisClient> CreateRedisClient(boost::asio::any_io_executor ex);
 
 } // namespace chat

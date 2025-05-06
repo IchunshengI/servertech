@@ -36,7 +36,7 @@ class RpcServer{
 };
 
 /* 这里后期要加上去zookeeper去注册的的操作 */
-std::unique_ptr<RpcServer> create_rpc_server(boost::asio::io_context& iox);
+std::unique_ptr<RpcServer> create_rpc_server(boost::asio::any_io_executor ex);
 
 } // namespace rpc
 
