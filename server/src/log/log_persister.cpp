@@ -72,7 +72,7 @@ void LogPersister::read(){
       return;
     }
 
-    char* data_ptr = data_ptr = read_buffer->buffer_.data() + curr_read;
+    char* data_ptr = read_buffer->buffer_.data() + curr_read;
     int len = 0;
 
 

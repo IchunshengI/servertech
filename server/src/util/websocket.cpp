@@ -180,3 +180,7 @@ error_code websocket::close(unsigned close_code, boost::asio::yield_context yiel
     impl_->ws.async_close(boost::beast::websocket::close_reason(close_code), yield[ec]);
     return ec;
 }
+
+boost::asio::any_io_executor websocket::get_executor() const {
+    return impl_->ws.get_executor();
+}

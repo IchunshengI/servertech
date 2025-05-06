@@ -44,6 +44,7 @@ BOOST_DESCRIBE_STRUCT(login_request, (), (email, password))
 BOOST_DESCRIBE_STRUCT(client_message, (), (content))
 BOOST_DESCRIBE_STRUCT(client_messages_event, (), (roomId, messages))
 BOOST_DESCRIBE_STRUCT(request_room_history_event, (), (roomId, firstMessageId))
+BOOST_DESCRIBE_STRUCT(client_session_messages_event, (), (sessionId, messages))
 
 }  // namespace chat
 
@@ -150,7 +151,18 @@ chat::any_client_event chat::parse_client_event(std::string_view from)
         if (parsed_payload.has_error())
             CHAT_RETURN_ERROR(parsed_payload.error())
         return parsed_payload.value();
-    }else if(type == "clientExit"){
+    }else if(type == "clientCreateSession"){ //client_session_messages_event
+        auto parsed_payload = boost::json::try_value_to<client_session_messages_event>(payload);
+        if (parsed_payload.has_error())
+            CHAT_RETURN_ERROR(parsed_payload.error())
+        return parsed_payload.value();
+    }else if(type == "clientUpdateSession"){ //client_session_messages_event
+        auto parsed_payload = boost::json::try_value_to<client_session_messages_event>(payload);
+        if (parsed_payload.has_error())
+            CHAT_RETURN_ERROR(parsed_payload.error())
+        return parsed_payload.value();
+    }
+    else if(type == "clientExit"){
          //std::cout << "clientExit" << std::endl;
          return client_exit_event{};
     }
@@ -260,6 +272,14 @@ std::string hello_event::to_json() const
     return serialize_event("hello", std::move(payload));
 }
 
+std::string server_update_session_event::to_json() const
+{
+    boost::json::object payload;
+    payload.emplace("sessionId", session_id);
+    
+    payload.emplace("messages", serialize_messages(messages,sending_user)); // 你已有的函数
+    return serialize_event("serverUpdateSession", std::move(payload));
+}
 std::string server_messages_event::to_json() const
 {
     boost::json::object payload;

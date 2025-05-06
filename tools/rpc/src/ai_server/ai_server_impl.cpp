@@ -64,11 +64,6 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
     iox_,
     [=,this]() -> boost::asio::awaitable<void> {
 
-      /* 进入*/
-      //std::cout << " <<< " << std::endl;
-      /* 从redis连接池中取数据 */
-      /* 获取连接池中的api_key 和 user_id、session_id等信息 */
-
       std::string query = request->query_message();
       MethodProcess methodProcess(this->iox_);
       methodProcess.Init("dashscope.aliyuncs.com");
@@ -96,6 +91,7 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
         }        
       }
 
+      /* 这里做入库操作 */
       delete request;
       delete controller;
       done->Run();

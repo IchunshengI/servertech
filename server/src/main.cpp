@@ -17,6 +17,7 @@
 #include "services/redis_client.hpp"
 #include "shared_state.hpp"
 #include "log/logger_wrapper.h"
+#include <thread>
 using namespace chat;
 
 int main(int argc, char* argv[])
@@ -78,8 +79,9 @@ int main(int argc, char* argv[])
 
     // Run the io_context. This will block until the context is stopped by
     // a signal and all outstanding async tasks are finished.
+   // std::thread t2([&](){ioc.run();});
     ioc.run();
-
+    //t2.join();
     // (If we get here, it means we got a SIGINT or SIGTERM)
     return EXIT_SUCCESS;
 }

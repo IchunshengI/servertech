@@ -1,5 +1,6 @@
 /__build/
 **/build*__/
+**/build/
 .cproject
 .project
 .settings/

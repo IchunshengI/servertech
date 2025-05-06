@@ -22,7 +22,7 @@ static std::unique_ptr<Logger> logger_ptr = nullptr;
         8192                        // 8kb
 */
 void InitLogger(boost::asio::io_context& io_context, size_t time, std::string file_path, size_t file_size, size_t default_buffer_size){
-    static std::once_flag init_flag;
+    //static std::once_flag init_flag;
    
     // std::signal(SIGINT, handle_signal);
     // std::signal(SIGTERM, handle_signal);
@@ -31,7 +31,7 @@ void InitLogger(boost::asio::io_context& io_context, size_t time, std::string fi
     logger_ptr.reset(new chat::Logger(io_context,time,file_path, file_size,default_buffer_size));
     
     // 启动 io_context 线程（可选，根据实际需求）
-    std::thread([&]() { io_context.run(); }).detach();
+    //std::thread([&]() { io_context.run(); }).detach();
    
 }
 

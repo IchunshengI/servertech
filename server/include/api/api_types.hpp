@@ -75,6 +75,12 @@ struct client_messages_event
     std::vector<client_message> messages;
 };
 
+struct client_session_messages_event
+{
+    std::string sessionId;
+    std::vector<client_message> messages;
+};
+
 // Sent by the client to request more history for a certain room.
 struct request_room_history_event
 {
@@ -93,7 +99,8 @@ using any_client_event = boost::variant2::variant<
     error_code,  // Invalid, used to report errors
     client_messages_event,
     request_room_history_event,
-    client_exit_event>;
+    client_exit_event,
+    client_session_messages_event>;
 
 // Parses a message received from the websocket client into a variant
 // holding any of the valid client-side events.
@@ -165,6 +172,13 @@ struct server_messages_event
     std::string to_json() const;
 };
 
+
+struct server_update_session_event {
+    std::string session_id;
+    const user& sending_user{0, "Root"};
+    boost::span<const message> messages;
+    std::string to_json() const;
+};
 // Sent to the client as a response to a request_room_history_event
 struct room_history_event
 {

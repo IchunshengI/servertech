@@ -9,12 +9,13 @@ Logger::Logger(boost::asio::io_context& io_context,
                size_t time, 
                std::string file_path,
                size_t file_size, 
-               size_t default_buffer_size) : fullBufferPtr_(nullptr), 
-                                             io_context_(io_context),
-                                             steady_timer_(io_context) {
+               size_t default_buffer_size) : io_context_(io_context),
+                                             steady_timer_(io_context),
+																						 time_(time) {
     currBufferPtr_ = new RingBuffer(default_buffer_size);
     nextBufferPtr_ = new RingBuffer(default_buffer_size);
     logPersister_ = new LogPersister(this, std::move(file_path), file_size);
+		fullBufferPtr_ = nullptr;
     TimerCallBack(); /* 启用定时回调 */
 }
 
@@ -27,7 +28,7 @@ Logger::~Logger(){
 }
 
 void Logger::TimerCallBack(){
-    steady_timer_.expires_after(std::chrono::seconds(1));
+    steady_timer_.expires_after(std::chrono::seconds(time_));
     steady_timer_.async_wait([&](const boost::system::error_code& ec) {
         if (!ec) {
             TimerCallBack();

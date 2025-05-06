@@ -8,29 +8,15 @@ export default function MessageInputBar({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const onKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      // Focus the input when the user presses any key, to make interaction smoother
-      inputRef.current.focus();
-
-      // Invoke the passed callback when Entr is hit, then clear the message
-      if (event.key === "Enter") {
-        const messageContent = inputRef.current?.value;
-        if (messageContent) {
-          onMessage(messageContent);
-          inputRef.current.value = "";
-        }
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      const messageContent = inputRef.current?.value;
+      if (messageContent) {
+        onMessage(messageContent);
+        inputRef.current.value = "";
       }
-    },
-    [onMessage],
-  );
-
-  useEffect(() => {
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [onKeyDown]);
+    }
+  };
 
   return (
     <div className="flex">
@@ -43,6 +29,7 @@ export default function MessageInputBar({
           className="flex-1 text-xl pl-4 pr-4 pt-2 pb-2 border-0 rounded-xl"
           placeholder="编辑消息..."
           ref={inputRef}
+          onKeyDown={handleKeyDown} // ✅ 直接在输入框监听回车
         />
       </div>
     </div>

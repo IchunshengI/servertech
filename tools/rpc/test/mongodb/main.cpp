@@ -35,14 +35,15 @@ int main() {
         }
 
         // 插入一条数据
+        {
         std::cout << "\nInserting a new message for user 'alice' and sessionKey 'session1':\n";
         bsoncxx::builder::stream::document document_builder;
         document_builder
             << "user" << "alice"
             << "sessionKey" << "session1"
             << "from" << "user1"
-            << "content" << "hello alice"
-            << "timestamp" << bsoncxx::types::b_date{std::chrono::system_clock::now()};
+            << "text" << "hello alice"
+            << "ts" << bsoncxx::types::b_date{std::chrono::system_clock::now()};
 
         bsoncxx::document::value doc_value = document_builder << bsoncxx::builder::stream::finalize;
         bsoncxx::stdx::optional<mongocxx::result::insert_one> result = coll.insert_one(doc_value.view());
@@ -53,6 +54,29 @@ int main() {
             std::cerr << "Insert failed." << std::endl;
         }
 
+        }
+
+
+        {
+        auto coll = db["sessions"];
+        std::cout << "\nInserting a new message for user 'alice' and sessionKey 'session1':\n";
+        bsoncxx::builder::stream::document document_builder;
+        document_builder
+            << "user" << "alice"
+            << "sessionKey" << "session1"
+            << "startedAt" << bsoncxx::types::b_date{std::chrono::system_clock::now()}
+            << "recentMessages" << "";
+
+        bsoncxx::document::value doc_value = document_builder << bsoncxx::builder::stream::finalize;
+        bsoncxx::stdx::optional<mongocxx::result::insert_one> result = coll.insert_one(doc_value.view());
+
+        if (result) {
+            std::cout << "Inserted with ID: " << result->inserted_id().get_oid().value.to_string() << std::endl;
+        } else {
+            std::cerr << "Insert failed." << std::endl;
+        }
+
+        }
         // 查询 Alice 的数据
         std::cout << "\nQuery for user 'alice' and sessionKey 'session1' after insertion:\n";
         bsoncxx::builder::stream::document filter_alice;

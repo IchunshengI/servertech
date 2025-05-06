@@ -22,23 +22,24 @@ auto async_task(Func f, thread_pool& pool)
   RetType result = co_await boost::asio::async_compose<
       decltype(use_awaitable), void(RetType)>(
     // initiation lambda，相当于 await_suspend()
-      [f = std::move(f), &pool, ex](auto& self) mutable {
-      // 提交到线程池
-      boost::asio::post(pool,
-                [f = std::move(f), ex, self = std::move(self)]() mutable
-                {
-            RetType value{};
-       
-            value = f();  // 执行同步任务
-        
-        // 任务完成，切回原 executor 恢复协程
-            boost::asio::post(ex,
-                          [self = std::move(self), value = std::move(value)]() mutable {
-                            self.complete(std::move(value));
-                          });
-      });
-    },
-    use_awaitable);
+      [f = std::move(f), &pool, ex](auto& self) mutable 
+      {
+        // 提交到线程池, 这里可以替换成自己的线程池接口
+        boost::asio::post(pool,
+          [f = std::move(f), ex, self = std::move(self)]() mutable
+            {
+              RetType value{};
+         
+              value = f();  // 执行同步任务
+          
+          // 任务完成，切回原 executor 恢复协程
+              boost::asio::post(ex,
+                            [self = std::move(self), value = std::move(value)]() mutable {
+                              self.complete(std::move(value));
+                            });
+            });
+      },
+      use_awaitable);
   co_return result;
 }
 

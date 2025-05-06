@@ -18,7 +18,7 @@
 #include "zookeeper_op.h"
 namespace rpc{
 
-using chat::LOG;
+//using chat::LOG;
 class RpcChannelImp : public RpcChannel{
  public:
   RpcChannelImp(std::string server_name, boost::asio::io_context& iox) : server_name_(server_name), iox_(iox), socket_(iox) {

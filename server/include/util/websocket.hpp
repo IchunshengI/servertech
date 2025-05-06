@@ -28,11 +28,11 @@ class websocket
     // pimpl idiom, to avoid including heavyweight Beast headers
     struct impl;
     std::unique_ptr<impl> impl_;
-
+    
     error_code write_locked_impl(std::string_view buff, boost::asio::yield_context yield);
     void lock_writes_impl(boost::asio::yield_context yield) noexcept;
     void unlock_writes_impl() noexcept;
-
+    
     struct write_guard_deleter
     {
         void operator()(websocket* sock) const noexcept { sock->unlock_writes_impl(); }
@@ -92,6 +92,11 @@ public:
 
     // Closes the websocket, sending close_code to the client.
     error_code close(unsigned close_code, boost::asio::yield_context yield);
+
+    /* 获取执行器 */
+
+    boost::asio::any_io_executor get_executor() const;
+    
 };
 
 }  // namespace chat

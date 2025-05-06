@@ -78,51 +78,12 @@ export type ServerMessagesEvent = {
   };
 };
 
-export type AnyServerEvent = 
-  | HelloEvent 
-  | ServerMessagesEvent 
-  | ServerCreateSessionEvent 
-  | ServerUpdateSessionEvent;
+export type AnyServerEvent = HelloEvent | ServerMessagesEvent;
 
 export type ClientMessagesEvent = {
   type: "clientMessages";
   payload: {
     roomId: string;
     messages: ClientMessage[];
-  };
-};
-
-// 新增会话相关事件
-export type ClientCreateSessionEvent = {
-  type: "clientCreateSession";  // 创建新会话事件
-  payload: {
-    sessionId: string;  // 会话ID
-    messages: ClientMessage[];
-  };
-};
-
-
-export type ClientUpdateSessionEvent = {
-  type: "clientUpdateSession";  // 更新会话事件
-  payload: {
-    sessionId: string;  // 会话ID
-    messages: ClientMessage[];
-  };
-};
-
-// 服务端返回的会话事件
-export type ServerCreateSessionEvent = {
-  type: "serverCreateSession";  // 服务端创建会话响应
-  payload: {
-    sessionId: string;  // 新创建的会话ID
-    messages: ServerMessage[];
-  };
-};
-
-export type ServerUpdateSessionEvent = {
-  type: "serverUpdateSession";  // 服务端更新会话响应
-  payload: {
-    sessionId: string;  // 被更新的会话ID
-    messages: ServerMessage[];
   };
 };

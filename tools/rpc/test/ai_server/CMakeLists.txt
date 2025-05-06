@@ -59,6 +59,8 @@ endif()
 
 add_executable(ai_client 
                client.cpp 
+               ${CMAKE_SOURCE_DIR}/src/signal.hpp
+               ${CMAKE_SOURCE_DIR}/src/rpc_client.cpp
                ${AI_SERVER_DIR}/ai_server.pb.cc)
 # # 链接父项目的静态库
 target_link_libraries(ai_client

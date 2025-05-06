@@ -1,0 +1,21 @@
+syntax = "proto3";
+option cc_generic_services = true;
+
+// 无参数的请求消息
+message InitRequest {
+  int32 user_id = 1;          // 发送的 32位 int
+  int32 session_id = 2;  // 发送的 32位 int
+  string api_key = 3;    // 发送的字符串
+}
+
+message QueryRequest {
+    string token = 1;
+    string query_message = 2;
+}
+message GeneralResponse {
+    string respon_message = 1;
+}
+service AiServer {
+    rpc SetInitInfo(InitRequest) returns (GeneralResponse);
+    rpc Query(QueryRequest) returns (GeneralResponse);
+}

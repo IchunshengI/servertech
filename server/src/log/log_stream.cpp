@@ -18,11 +18,11 @@ std::string LogStream::formatTime(const std::chrono::system_clock::time_point &t
 }
 
 LogStream::~LogStream(){
-    logger_->append(std::move(this->str() + "\n"));
+    logger_->append(this->str()+"\n"); /* 这里不用手动std::move 编译器会自动开启优化 */
 }
 
 
-RingBuffer::RingBuffer(size_t c): capacity(c), buffer_(c),write_pos_(0),read_pos_(0),is_full_(false){
+RingBuffer::RingBuffer(size_t c): capacity(c), write_pos_(0),read_pos_(0),is_full_(false),buffer_(c){
 
 }
 
@@ -68,7 +68,8 @@ int RingBuffer::push(const std::string& log){
     const size_t writable  = std::min(log_size,free_space);
     const size_t first_chunk = std::min(writable , capacity - write_pos_.load());
     memcpy(buffer_.data()+write_pos_.load(), log.data(), first_chunk);
-if（第一个块<可写的）{
+
+    if(first_chunk < writable ){
         memcpy(buffer_.data(), log.data()+first_chunk, writable - first_chunk);
     }
 
