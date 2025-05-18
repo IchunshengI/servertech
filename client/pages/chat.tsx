@@ -459,7 +459,7 @@ export default function ChatPage() {
     <>
       <Head />
       <div className="flex flex-col h-full relative">
-        <button onClick={handleLogout} className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">退出登录</button>
+        <button onClick={handleLogout} className="absolute top-4 right-4 z-10 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">退出登录</button>
         <ChatScreen
           rooms={rooms}
           sessions={sessions}

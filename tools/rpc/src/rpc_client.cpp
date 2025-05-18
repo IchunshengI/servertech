@@ -48,7 +48,7 @@ awaitable<bool> RpcClient::SetInitInfo(uint32_t user_id, uint32_t session_id, st
       signal->Signal();      
     });
   // 使用protobuf自动生成的存根类
-  AiServer_Stub stub(channel_.get());
+  //AiServer_Stub stub(channel_.get());
   ai_server_stub_->SetInitInfo(
     controller_.get(),
     request.get(),
@@ -71,7 +71,7 @@ awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
   query_request->set_query_message(std::move(query));
   query_request->set_token(token_);
 
-  AiServer_Stub stub(channel_.get());
+  //AiServer_Stub stub(channel_.get());
 
   auto signal = std::make_shared<SimpleSignal>(ex_);
   auto* closure = rpc::RpcClosure::Create(

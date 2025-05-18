@@ -224,7 +224,7 @@ struct event_handler_visitor
 
           rpc::RpcClient rpc_client(ws_prt->get_executor());
           co_await rpc_client.SetInitInfo(1,1,"sk-91d3a22bf7824e4dbc69a8383cd5cebb");
-          auto result = co_await rpc_client.Query("rpc是什么？");
+          auto result = co_await rpc_client.Query(query);
            if (result.has_error()){
               std::cerr << "错误 !" << std::endl;
               co_return;
