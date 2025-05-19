@@ -8,6 +8,7 @@
 #include "ai_server.pb.h"
 #include <memory>
 #include "boost/asio.hpp"
+#include "method_process.h"
 #include "boost/asio/cancel_at.hpp"
 namespace chat{
 
@@ -35,6 +36,7 @@ class AiServerImpl : public AiServer,
  private:
   boost::asio::any_io_executor ex_;
   std::shared_ptr<RedisClient> redis_client_;
+  MethodProcess method_process_;
   
 }; // namespace chat
 

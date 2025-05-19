@@ -360,28 +360,44 @@ awaitable<error_with_message> MethodProcess::Chunked_handler(std::string& respon
 }         
 
 /* 带有content */
-awaitable<error_with_message> MethodProcess::Content_handler(std::string& response_data,
-                                                             boost::asio::streambuf& response_stream,
-                                                             boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& ssl_stream,
-                                                             size_t content_length
-                                                            )
+awaitable<error_with_message> MethodProcess::Content_handler(
+    std::string& response_data,
+    boost::asio::streambuf& response_stream,
+    boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& ssl_stream,
+    size_t content_length)
 {
     boost::system::error_code ec;
     size_t received = 0;
-    while(received < content_length) {
-      const size_t n = co_await boost::asio::async_read(ssl_stream, response_stream,
-                                                        boost::asio::transfer_at_least(1),
-                                                        boost::asio::use_awaitable);
-      received += n;
-      /* 追加数据 */
-      const auto& data = response_stream.data();
-      response_data.append(boost::asio::buffers_begin(data),
-                           boost::asio::buffers_end(data));
-      
-      response_stream.consume(n);
+
+    // 首先消费 response_stream 中已经存在的数据
+    {
+        size_t available = response_stream.size(); // 已经读取到但尚未消费的字节数
+        size_t to_read = std::min(available, content_length);
+        std::istream is(&response_stream);
+        std::vector<char> buffer(to_read);
+        is.read(buffer.data(), to_read);
+        response_data.append(buffer.data(), to_read);
+        received += to_read;
     }
+
+    // 然后再从 socket 中读剩余部分
+    while (received < content_length) {
+        size_t to_read = content_length - received;
+        size_t n = co_await boost::asio::async_read(
+            ssl_stream, response_stream,
+            boost::asio::transfer_at_least(1), boost::asio::use_awaitable);
+
+        std::istream is(&response_stream);
+        std::vector<char> buffer(n);
+        is.read(buffer.data(), n);
+        response_data.append(buffer.data(), n);
+
+        received += n;
+    }
+
     co_return error_with_message{ec, ""};
 }
+
 /* 什么都没带 */                                                
 awaitable<error_with_message> MethodProcess::Eof_handler(std::string& response_data,
                                                          boost::asio::streambuf& response_stream,

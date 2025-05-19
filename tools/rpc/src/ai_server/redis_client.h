@@ -33,6 +33,7 @@ public:
   /* 传递初始信息并返回生成的session */
   awaitable<result_with_message<std::string>> SessionInit(SessionInfo);
   awaitable<result_with_message<std::string>> GetApiKey(std::string& session_token);
+  awaitable<result_with_message<SessionInfo>> GetSessionInfo(const std::string& session_token);
 private:
   static std::string GetRedisKey(std::string_view session);
   boost::asio::any_io_executor ex_;

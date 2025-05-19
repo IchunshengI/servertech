@@ -98,4 +98,42 @@ awaitable<result_with_message<std::string>> RedisClient::GetApiKey(std::string& 
   co_return api_key;
 }
 
+awaitable<result_with_message<SessionInfo>> RedisClient::GetSessionInfo(const std::string& session_token)
+{
+  boost::system::error_code ec;
+  auto conn_result = co_await redis_pool_->GetConnection();
+  if (conn_result.has_error())
+  {
+    LOG("Error") << "Failed to get Redis connection";
+    co_return error_with_message{rpc::errc::redis_runtime_error, "Get redisconnection error"};
+  }
+
+  auto& conn = conn_result.value();
+  boost::redis::request req;
+  boost::redis::response<std::int64_t, std::map<std::string, std::string>> resp;
+
+  req.push("EXISTS", session_token);
+  req.push("HGETALL", session_token);
+
+  co_await conn->async_exec(req, resp, boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+  if (ec) {
+    LOG("Error") << "Redis async_exec error: " << ec.message();
+    co_return error_with_message{ec, "Redis async_exec error"};
+  }
+
+  auto key_exists = std::get<0>(resp);
+  if (key_exists == 0) {
+    LOG("Error") << "Session key not found in Redis";
+    co_return error_with_message{rpc::errc::not_found, "Session key not found in Redis"};
+  }
+
+  const auto& hash = std::get<1>(resp);
+  SessionInfo info;
+  info.user_id_ = std::stoll(hash->at("user_id"));
+  info.session_id_ = std::stoll(hash->at("session_id"));
+  info.api_key_ = hash->at("api_key");
+  co_return info;
+}
+
+
 } // namespace chat

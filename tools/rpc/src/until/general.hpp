@@ -9,7 +9,7 @@
 #include <string>
 #include <stdexcept>
 #include "base64.hpp"
-#pragma
+#pragma once
 
 
 namespace chat{

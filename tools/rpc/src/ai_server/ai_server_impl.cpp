@@ -5,12 +5,13 @@
 #include "ai_server.pb.h"
 #include "ai_server_impl.h"
 #include "log/logger_wrapper.h"
-#include "method_process.h"
+// #include "method_process.h"
 #include "redis_client.h"
 namespace chat{
-AiServerImpl::AiServerImpl(boost::asio::any_io_executor ex) : ex_(ex)
+AiServerImpl::AiServerImpl(boost::asio::any_io_executor ex) : ex_(ex), method_process_(ex)
 {
   redis_client_ = CreateRedisClient(ex);
+  method_process_.Init("dashscope.aliyuncs.com");
 }
 AiServerImpl::~AiServerImpl(){
 
@@ -65,10 +66,8 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
     [=,this]() -> boost::asio::awaitable<void> {
 
       std::string query = request->query_message();
-      MethodProcess methodProcess(this->ex_);
-      methodProcess.Init("dashscope.aliyuncs.com");
       std::string token = request->token();
-      auto result = co_await redis_client_->GetApiKey(token);
+      auto result = co_await redis_client_->GetSessionInfo(token);
 
       /* 处理apikey的获取结果*/
       if (result.has_error())
@@ -80,9 +79,9 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
           response->set_respon_message("server error, please try again");
         }
       } else{
-        std::string api_key = result.value();
+        SessionInfo session_info = result.value();
         /* 云端服务调用 */
-        auto call_result = co_await methodProcess.CallModelByHttps(query, api_key);
+        auto call_result = co_await method_process_.CallModelByHttps(query, session_info.api_key_);
         if (call_result.has_error()) {
           LOG("Error") << "CallModelByhttps error : " << call_result.error().message();
           response->set_respon_message(call_result.error().message());

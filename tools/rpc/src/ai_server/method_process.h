@@ -3,10 +3,12 @@
   Author	:	Weiktang & chunsheng
   Brief		:	rpc远端服务方法处理类
 */
+
+#ifndef CHAT_METHOD_PROCESS_H
+#define CHAT_METHOD_PROCESS_H
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/streambuf.hpp>
 #include "result_with_message.h"
-#pragma 
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/beast/http.hpp>
@@ -67,3 +69,4 @@ class MethodProcess{
 }; // namespace chat
 }
 
+#endif
