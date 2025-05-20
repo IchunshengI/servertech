@@ -23,7 +23,9 @@ include_directories(
 
 find_package(Boost REQUIRED COMPONENTS headers context coroutine json PATHS /usr/local/lib)
 find_package(OpenSSL REQUIRED)
-
+# 查找 mongocxx（依赖 bsoncxx 会自动找）
+find_package(mongocxx REQUIRED)
+find_package(Threads REQUIRED)
 
 add_executable(ai_server 
                server.cpp
@@ -33,6 +35,8 @@ add_executable(ai_server
                ${AI_SERVER_DIR}/redis_pool.cpp
                ${AI_SERVER_DIR}/boost/boost_redis.cpp
                ${AI_SERVER_DIR}/redis_client.cpp
+               ${AI_SERVER_DIR}/thread_poll/thread_poll.cpp
+               ${AI_SERVER_DIR}/mongodb/mongodb_client.cpp
                ${CMAKE_SOURCE_DIR}/src/until/general.hpp
                ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
                )
@@ -43,10 +47,15 @@ target_link_libraries(ai_server PRIVATE
     rpc_static  # 直接使用父项目定义的库目标
     OpenSSL::SSL
     Boost::json
+    mongo::mongocxx_shared
+    mongo::bsoncxx_shared
+    Threads::Threads
 )
 # 继承父项目的头文件路径（关键！）
 target_include_directories(ai_server PRIVATE
     ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
+    /usr/local/include/mongocxx/v_noabi
+    /usr/local/include/bsoncxx/v_noabi
 )
 # 设置 ai_server 的输出目录为 bin/client
 set_target_properties(ai_server PROPERTIES
@@ -57,85 +66,85 @@ if(ENABLE_DEBUG_INFO)
   target_compile_definitions(ai_server PRIVATE DEBUG_INFO)
 endif()
 
-add_executable(ai_client 
-               client.cpp 
-               ${CMAKE_SOURCE_DIR}/src/signal.hpp
-               ${CMAKE_SOURCE_DIR}/src/rpc_client.cpp
-               ${AI_SERVER_DIR}/ai_server.pb.cc)
-# # 链接父项目的静态库
-target_link_libraries(ai_client
-    PRIVATE 
-    rpc_static  # 直接使用父项目定义的库目标
-)
+# add_executable(ai_client 
+#                client.cpp 
+#                ${CMAKE_SOURCE_DIR}/src/signal.hpp
+#                ${CMAKE_SOURCE_DIR}/src/rpc_client.cpp
+#                ${AI_SERVER_DIR}/ai_server.pb.cc)
+# # # 链接父项目的静态库
+# target_link_libraries(ai_client
+#     PRIVATE 
+#     rpc_static  # 直接使用父项目定义的库目标
+# )
+# # # 继承父项目的头文件路径（关键！）
+# target_include_directories(ai_client
+#     PRIVATE
+#     ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
+# )
+# # 设置 ai_client 的输出目录为 bin/client
+# set_target_properties(ai_client PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/client"
+# )
+
+
+# add_executable(test_function 
+#                test_function.cpp
+#                ${AI_SERVER_DIR}/ai_server_impl.cpp
+#                ${AI_SERVER_DIR}/method_process.cpp
+#                ${AI_SERVER_DIR}/ai_server.pb.cc
+#                ${AI_SERVER_DIR}/boost/boost_redis.cpp
+#                ${AI_SERVER_DIR}/redis_pool.cpp
+#                ${AI_SERVER_DIR}/redis_client.cpp
+#                ${CMAKE_SOURCE_DIR}/src/until/general.hpp
+#                ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
+#                )
+
+# if(ENABLE_DEBUG_INFO)
+#  target_compile_definitions(test_function PRIVATE DEBUG_INFO)
+# endif()
+# # # 链接父项目的静态库
+# target_link_libraries(test_function PRIVATE 
+#     rpc_static  # 直接使用父项目定义的库目标
+#     OpenSSL::SSL
+#     Boost::json
+# )
 # # 继承父项目的头文件路径（关键！）
-target_include_directories(ai_client
-    PRIVATE
-    ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
-)
-# 设置 ai_client 的输出目录为 bin/client
-set_target_properties(ai_client PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/client"
-)
+# target_include_directories(test_function PRIVATE
+#     ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
+# )
+
+# set_target_properties(test_function PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/function"
+# )
 
 
-add_executable(test_function 
-               test_function.cpp
-               ${AI_SERVER_DIR}/ai_server_impl.cpp
-               ${AI_SERVER_DIR}/method_process.cpp
-               ${AI_SERVER_DIR}/ai_server.pb.cc
-               ${AI_SERVER_DIR}/boost/boost_redis.cpp
-               ${AI_SERVER_DIR}/redis_pool.cpp
-               ${AI_SERVER_DIR}/redis_client.cpp
-               ${CMAKE_SOURCE_DIR}/src/until/general.hpp
-               ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
-               )
-
-if(ENABLE_DEBUG_INFO)
- target_compile_definitions(test_function PRIVATE DEBUG_INFO)
-endif()
-# # 链接父项目的静态库
-target_link_libraries(test_function PRIVATE 
-    rpc_static  # 直接使用父项目定义的库目标
-    OpenSSL::SSL
-    Boost::json
-)
-# 继承父项目的头文件路径（关键！）
-target_include_directories(test_function PRIVATE
-    ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
-)
-
-set_target_properties(test_function PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/function"
-)
-
-
-add_executable(redis_test 
-                redis_test.cpp
-               ${AI_SERVER_DIR}/ai_server_impl.cpp
-               ${AI_SERVER_DIR}/method_process.cpp
-               ${AI_SERVER_DIR}/redis_pool.cpp
-               ${AI_SERVER_DIR}/ai_server.pb.cc
-               ${AI_SERVER_DIR}/boost/boost_redis.cpp
+# add_executable(redis_test 
+#                 redis_test.cpp
+#                ${AI_SERVER_DIR}/ai_server_impl.cpp
+#                ${AI_SERVER_DIR}/method_process.cpp
+#                ${AI_SERVER_DIR}/redis_pool.cpp
+#                ${AI_SERVER_DIR}/ai_server.pb.cc
+#                ${AI_SERVER_DIR}/boost/boost_redis.cpp
                
-               ${AI_SERVER_DIR}/redis_client.cpp
-               ${CMAKE_SOURCE_DIR}/src/until/general.hpp
-               ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
-               )
+#                ${AI_SERVER_DIR}/redis_client.cpp
+#                ${CMAKE_SOURCE_DIR}/src/until/general.hpp
+#                ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
+#                )
 
-if(ENABLE_DEBUG_INFO)
- target_compile_definitions(test_function PRIVATE DEBUG_INFO)
-endif()
-# # 链接父项目的静态库
-target_link_libraries(redis_test PRIVATE 
-    rpc_static  # 直接使用父项目定义的库目标
-    OpenSSL::SSL
-    Boost::json
-)
-# 继承父项目的头文件路径（关键！）
-target_include_directories(redis_test PRIVATE
-    ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
-)
+# if(ENABLE_DEBUG_INFO)
+#  target_compile_definitions(test_function PRIVATE DEBUG_INFO)
+# endif()
+# # # 链接父项目的静态库
+# target_link_libraries(redis_test PRIVATE 
+#     rpc_static  # 直接使用父项目定义的库目标
+#     OpenSSL::SSL
+#     Boost::json
+# )
+# # 继承父项目的头文件路径（关键！）
+# target_include_directories(redis_test PRIVATE
+#     ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
+# )
 
-set_target_properties(redis_test PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/function"
-)
+# set_target_properties(redis_test PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/function"
+# )

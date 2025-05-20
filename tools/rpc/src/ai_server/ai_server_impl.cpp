@@ -6,12 +6,16 @@
 #include "ai_server_impl.h"
 #include "log/logger_wrapper.h"
 // #include "method_process.h"
+#include "mongodb/mongodb_client.h"
 #include "redis_client.h"
+#include "thread_poll/thread_poll.hpp"
 namespace chat{
-AiServerImpl::AiServerImpl(boost::asio::any_io_executor ex) : ex_(ex), method_process_(ex)
+AiServerImpl::AiServerImpl(boost::asio::any_io_executor ex) : ex_(ex), method_process_(ex), thraed_pool_(4, 8)
 {
   redis_client_ = CreateRedisClient(ex);
   method_process_.Init("dashscope.aliyuncs.com");
+  std::string uri = "mongodb://tlx:hpcl6tlx@localhost:27017/?authSource=chat";
+  monogodb_client_ptr_ = std::make_shared<MonogodbClient>(uri, "chat");
 }
 AiServerImpl::~AiServerImpl(){
 
@@ -65,10 +69,12 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
     ex_,
     [=,this]() -> boost::asio::awaitable<void> {
 
-      std::string query = request->query_message();
+      auto query = std::make_shared<std::string>(request->query_message());
+      std::shared_ptr<std::string> respon_data; 
       std::string token = request->token();
       auto result = co_await redis_client_->GetSessionInfo(token);
 
+      
       /* 处理apikey的获取结果*/
       if (result.has_error())
       {
@@ -81,16 +87,30 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
       } else{
         SessionInfo session_info = result.value();
         /* 云端服务调用 */
-        auto call_result = co_await method_process_.CallModelByHttps(query, session_info.api_key_);
+        auto call_result = co_await method_process_.CallModelByHttps(*query, session_info.api_key_);
         if (call_result.has_error()) {
           LOG("Error") << "CallModelByhttps error : " << call_result.error().message();
           response->set_respon_message(call_result.error().message());
         } else {
           response->set_respon_message(call_result.value());
+          // 移动 string 到 shared_ptr 中
+          respon_data = std::make_shared<std::string>(std::move(call_result.value()));
         }        
+
+        
+        /* 这里做入库操作 */
+        //monogodb_client_ptr_->insertMessage();
+         monogodb_client_ptr_->insertMessage(session_info.user_id_,
+                                             session_info.session_id_,
+                                             "user",
+                                             *query);
+         monogodb_client_ptr_->insertMessage(session_info.user_id_,
+                                             session_info.session_id_,
+                                             "root",
+                                             *respon_data);                                             
+                                             
       }
 
-      /* 这里做入库操作 */
       delete request;
       delete controller;
       done->Run();

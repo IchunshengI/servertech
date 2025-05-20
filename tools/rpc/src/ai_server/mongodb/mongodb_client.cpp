@@ -38,7 +38,7 @@ bool MonogodbClient::insertSession(const int userID, const int sessionID)
   doc_builder << "userID" << userID
               << "sessionID" << sessionID;
 
-  auto result = sessions_.insert_one(doc_builder << finalize);
+  auto result = messages_.insert_one(doc_builder << finalize);
   return result.has_value();
 }
 
