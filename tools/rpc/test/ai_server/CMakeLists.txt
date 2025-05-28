@@ -66,25 +66,25 @@ if(ENABLE_DEBUG_INFO)
   target_compile_definitions(ai_server PRIVATE DEBUG_INFO)
 endif()
 
-# add_executable(ai_client 
-#                client.cpp 
-#                ${CMAKE_SOURCE_DIR}/src/signal.hpp
-#                ${CMAKE_SOURCE_DIR}/src/rpc_client.cpp
-#                ${AI_SERVER_DIR}/ai_server.pb.cc)
-# # # 链接父项目的静态库
-# target_link_libraries(ai_client
-#     PRIVATE 
-#     rpc_static  # 直接使用父项目定义的库目标
-# )
-# # # 继承父项目的头文件路径（关键！）
-# target_include_directories(ai_client
-#     PRIVATE
-#     ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
-# )
-# # 设置 ai_client 的输出目录为 bin/client
-# set_target_properties(ai_client PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/client"
-# )
+add_executable(ai_client 
+               client.cpp 
+               ${CMAKE_SOURCE_DIR}/src/signal.hpp
+               ${CMAKE_SOURCE_DIR}/src/rpc_client.cpp
+               ${AI_SERVER_DIR}/ai_server.pb.cc)
+# # 链接父项目的静态库
+target_link_libraries(ai_client
+    PRIVATE 
+    rpc_static  # 直接使用父项目定义的库目标
+)
+# # 继承父项目的头文件路径（关键！）
+target_include_directories(ai_client
+    PRIVATE
+    ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
+)
+# 设置 ai_client 的输出目录为 bin/client
+set_target_properties(ai_client PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/client"
+)
 
 
 # add_executable(test_function 

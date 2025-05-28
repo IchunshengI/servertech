@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package tutorial;
+
+message BigStringData {
+  string id = 1;
+  string content = 2; // 很长的字符串字段
+}

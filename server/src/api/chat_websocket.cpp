@@ -199,8 +199,6 @@ struct event_handler_visitor
         std::vector<message> msgs;
         msgs.reserve(evt.messages.size());
         
-      
-
         
         std::cout << "\n\nsession id is : " << evt.sessionId << std::endl;
         std::cout << " size : " << evt.messages.size()<< std::endl;;
@@ -237,7 +235,7 @@ struct event_handler_visitor
               k_root_user.id           // user_id 是 Root（固定为 0）
           };
 
-                    // 3. 组织为一个 vector，传 span
+          // 3. 组织为一个 vector，传 span
           std::vector<message> messages;
           messages.clear();
           messages.push_back(std::move(msg));

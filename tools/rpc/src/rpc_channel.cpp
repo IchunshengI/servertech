@@ -6,6 +6,7 @@
 #include "rpc_channel.h"
 #include <boost/asio.hpp>
 #include <boost/asio/error.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/system/detail/error_code.hpp>
 #include <boost/system/error_code.hpp>
@@ -16,12 +17,47 @@
 #include "google/protobuf/message.h"
 #include "rpc_meta.pb.h"
 #include "zookeeper_op.h"
-namespace rpc{
 
+namespace rpc{
 using chat::LOG;
+
+class TimeoutGuard{
+     
+public:
+    TimeoutGuard(boost::asio::steady_timer& timer, boost::asio::ip::tcp::socket& socket,
+                 std::chrono::steady_clock::duration timeout = std::chrono::seconds(10)) : timer_(timer), cancelled_(false)
+                 {
+                    timer_.expires_after(timeout);
+                    co_spawn(timer_.get_executor(), [&]() -> boost::asio::awaitable<void> {
+                        boost::system::error_code ec;
+                        co_await timer_.async_wait(boost::asio::redirect_error(boost::asio::use_awaitable, ec));
+                        if (!cancelled_ && !ec) {
+                            #ifdef DEBUG_INFO
+                            std::cerr << "超时了" << std::endl;
+                            #endif
+                            socket.cancel();  // 超时后取消 socket
+                        }
+                        co_return;
+                    }, boost::asio::detached);
+                 }
+    
+    ~TimeoutGuard(){
+        Cancel();
+    }
+
+    void Cancel(){
+        cancelled_ = true;
+        boost::system::error_code ignore;
+        timer_.cancel(ignore);
+    }
+private:
+    boost::asio::steady_timer& timer_;
+    bool cancelled_;
+};
+
 class RpcChannelImp : public RpcChannel{
  public:
-  RpcChannelImp(std::string server_name, boost::asio::any_io_executor ex) : server_name_(server_name), ex_(ex), socket_(ex) {
+  RpcChannelImp(std::string server_name, boost::asio::any_io_executor ex) : server_name_(server_name), ex_(ex), socket_(ex), timer_(ex) {
   }
   ~RpcChannelImp () override{
 #ifdef DEBUG_INFO  
@@ -67,11 +103,12 @@ class RpcChannelImp : public RpcChannel{
       serialzied_str += request_data_str;     
 
       boost::asio::co_spawn(ex_,
-                            [this, send_data= std::move(serialzied_str), response,done] () -> boost::asio::awaitable<void> {
+                            [this, send_data= std::move(serialzied_str), response,done,controller] () -> boost::asio::awaitable<void> {
                                /* 挂起点,等待 */
                                auto ec = co_await Handle_write_recv(send_data,response); 
                                if (ec) {
                                  LOG("Error") << "Handle_write_recv error" << ec.message();
+                                 controller->SetFailed(ec.message());
                                }
 
                                /* 执行回调，恢复主协程 */
@@ -170,38 +207,59 @@ class RpcChannelImp : public RpcChannel{
   /* 读取并接收 */
   boost::asio::awaitable<boost::system::error_code> Handle_write_recv(const std::string& send_data, google::protobuf::Message* response){
     boost::system::error_code ec;
+
     /* 发送数据 */
     co_await boost::asio::async_write(socket_,
                                       boost::asio::buffer(send_data),
                                       boost::asio::redirect_error(boost::asio::use_awaitable, ec)
                                       );
+
+
     if (ec) {
       LOG("Error") << "Handle_write_recv async_write error " << ec.message();
       co_return ec;
     }
-
+    
     /* 接收响应长度 */
     uint32_t resp_len;
-    co_await socket_.async_receive(boost::asio::buffer(reinterpret_cast<char*>(&resp_len), sizeof(resp_len)),
+    // boost::asio::steady_timer timer2(socket_.get_executor());
+    // timer2.expires_after(std::chrono::seconds(5));
+    // // 启动定时器任务：超时后取消 socket
+    // boost::asio::co_spawn(socket_.get_executor(), [&]() -> boost::asio::awaitable<void> {
+    //     co_await timer2.async_wait(boost::asio::use_awaitable);
+    //     socket_.cancel();  // 取消 recv
+    //     std::cerr << "超时了" << std::endl;
+    //     co_return;
+    // }, boost::asio::detached);
+
+    {
+        TimeoutGuard timeout_guard(timer_, socket_);
+        co_await socket_.async_receive(boost::asio::buffer(reinterpret_cast<char*>(&resp_len), sizeof(resp_len)),
                                     boost::asio::redirect_error(boost::asio::use_awaitable,ec)
                                     );
-    if (ec) {
-      LOG("Error") << "Handle_write_recv async_receive resp_len error" << ec.message();
-      co_return ec;
+
+        if (ec) {
+          LOG("Error") << "Handle_write_recv async_receive resp_len error : " << ec.message();
+          co_return ec;
+        }
     }
+
     resp_len = ntohl(resp_len);
     if (resp_len == 0){
       LOG("Error") << "Handle_write_recv resp_len error";
       co_return boost::system::errc::make_error_code(boost::system::errc::bad_message);
     }
+
     std::vector<char> resp_data(resp_len);
-    co_await socket_.async_receive(boost::asio::buffer(resp_data),
-                                   boost::asio::redirect_error(boost::asio::use_awaitable, ec)
-                                   );
-    if (ec) {
-      co_return ec;
+    {
+        TimeoutGuard timeout_guard(timer_, socket_);
+        co_await socket_.async_receive(boost::asio::buffer(resp_data),
+                                       boost::asio::redirect_error(boost::asio::use_awaitable, ec)
+                                       );
+        if (ec) {
+          co_return ec;
+        }
     }
-    
     /* 反序列化 */
     if (!response->ParseFromArray(resp_data.data(),resp_data.size())){
       LOG("Error") << "Handle_write_recv ParseFromArray error";
@@ -214,6 +272,7 @@ class RpcChannelImp : public RpcChannel{
   std::string server_name_;
   boost::asio::any_io_executor ex_;
   boost::asio::ip::tcp::socket socket_;
+  boost::asio::steady_timer timer_;
 
 };
 

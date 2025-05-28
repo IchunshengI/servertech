@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package tutorial;
+
+message PersonSimple {
+  string name = 1;
+  int32 id = 2;
+  string email = 3;
+  string phone = 4;                             // 只有一个电话，不是 repeated，也没有单独嵌套 PhoneNumber
+  int32 phone_type = 5;
+}

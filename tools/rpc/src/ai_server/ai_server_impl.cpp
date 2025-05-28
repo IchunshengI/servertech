@@ -74,6 +74,9 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
       std::string token = request->token();
       auto result = co_await redis_client_->GetSessionInfo(token);
 
+    //   boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
+    //   timer.expires_after(std::chrono::seconds(10));
+    //   co_await timer.async_wait();
       
       /* 处理apikey的获取结果*/
       if (result.has_error())
