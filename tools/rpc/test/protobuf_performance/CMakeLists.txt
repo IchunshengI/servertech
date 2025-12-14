@@ -1,38 +1,31 @@
-cmake_minimum_required(VERSION 3.10)
-project(ProtoVsJsonTest)
+cmake_minimum_required(VERSION 3.20)
+project(ProtoVsJsonTest LANGUAGES CXX)
 
-# 设置C++20标准
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE "Debug")
 
+# Debug 可选：你也可以用 cmake -DCMAKE_BUILD_TYPE=Debug 控制
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
 
-find_package(Boost REQUIRED COMPONENTS json PATHS /usr/local/lib)
+# Boost JSON（Boost 装在 /usr/local 的话一般不用 PATHS；你要留也可以）
+find_package(Boost 1.86 REQUIRED COMPONENTS json)
 
-set(PROTOBUF_ROOT_DIR "/home/tlx/project/protobuf-30.2")
-set(PROTOBUF_INSTALL_DIR "${PROTOBUF_ROOT_DIR}/install")
-file(GLOB ABSL_LIBS "${PROTOBUF_INSTALL_DIR}/lib/libabsl*.so")
-# 添加Protobuf头文件路径
-include_directories(
-  ${PROTOBUF_INSTALL_DIR}/include  # Protobuf核心头文件
-  ${CMAKE_CURRENT_SOURCE_DIR}/src  # 生成的.pb.h文件路径
-)
-# 添加Protobuf库文件路径
-link_directories(
-  ${PROTOBUF_INSTALL_DIR}/lib
-)
+# Protobuf：用 CONFIG 模式（来自 /usr/local/lib/cmake/protobuf）
+find_package(Protobuf CONFIG REQUIRED)
 
 add_executable(performance
-               performance.cpp
-               addressbook.pb.cc
-              )
+  performance.cpp
+  addressbook.pb.cc
+)
 
 if(ENABLE_DEBUG_INFO)
- target_compile_definitions(performance PRIVATE DEBUG_INFO)
+  target_compile_definitions(performance PRIVATE DEBUG_INFO)
 endif()
-# # 链接父项目的静态库
-target_link_libraries(performance PRIVATE 
-    Boost::json
-    protobuf  
-    ${ABSL_LIBS}
+
+# 不要再写 protobuf / ${ABSL_LIBS}，直接用导出的 target
+target_link_libraries(performance PRIVATE
+  Boost::json
+  protobuf::libprotobuf
 )

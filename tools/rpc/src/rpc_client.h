@@ -14,7 +14,7 @@
 #include "rpc_channel.h"
 #include "rpc_controller.h"
 #include "ai_server/ai_server.pb.h"
-namespace chat {
+namespace rpc {
 
 using boost::asio::awaitable;
 using rpc::result_with_message;

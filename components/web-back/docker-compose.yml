@@ -1,0 +1,19 @@
+services:
+  web-back-gpp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: web-back-gpp12-boost186
+    container_name: web-back-gpp
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+
+    environment:
+      TZ: Asia/Shanghai
+
+    volumes:
+      - ../../:/workspace
+
+    networks:
+      - servertech-net

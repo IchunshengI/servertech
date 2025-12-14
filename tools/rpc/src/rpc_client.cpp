@@ -6,7 +6,7 @@
 #include "ai_server/ai_server.pb.h"
 #include "rpc_closure.h"
 #include "signal.hpp"
-namespace chat{
+namespace rpc {
 
 RpcClient::RpcClient(boost::asio::any_io_executor ex) : ex_(ex)
 {
@@ -35,12 +35,12 @@ awaitable<bool> RpcClient::SetInitInfo(uint32_t user_id, uint32_t session_id, st
     co_return false;
   }
   
-  auto signal = std::make_shared<SimpleSignal>(ex_);
+  auto signal = std::make_shared<chat::SimpleSignal>(ex_);
 
   auto* closure = rpc::RpcClosure::Create(
     [&](){               
       if (controller_->Failed()) {
-        LOG("Error") << "RPC Failed: " << controller_->ErrorText() << std::endl;
+        chat::LOG("Error") << "RPC Failed: " << controller_->ErrorText() << std::endl;
         flag = false;
       } 
 
@@ -73,11 +73,11 @@ awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
 
   //AiServer_Stub stub(channel_.get());
 
-  auto signal = std::make_shared<SimpleSignal>(ex_);
+  auto signal = std::make_shared<chat::SimpleSignal>(ex_);
   auto* closure = rpc::RpcClosure::Create(
     [&]() {
       if (controller_->Failed()) {
-          LOG("Error") << "RPC Query Failed: " << controller_->ErrorText() << std::endl;
+          chat::LOG("Error") << "RPC Query Failed: " << controller_->ErrorText() << std::endl;
           result = controller_->ErrorText();
           flag = false;
       } else {
@@ -92,5 +92,5 @@ awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
   co_return result;
 }
 
-} // namespace chat
+} // namespace rpc 
 

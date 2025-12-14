@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
     // threaded, so we set the concurrency hint to 1
     boost::asio::io_context ioc{1}; /* 异步运行时环境*/
 
-    chat::InitLogger(ioc);
+    chat::InitLogger(ioc.get_executor());
     chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
     LOG("DEBUG") << "Success Init";
 

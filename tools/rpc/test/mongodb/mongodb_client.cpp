@@ -29,7 +29,7 @@ bool MonogodbClient::insertMessage(const int userID, const int sessionID,
               << "text" << content
               << "ts" << bsoncxx::types::b_date{std::chrono::system_clock::now()};
   auto result = messages_.insert_one(doc_builder << finalize);
-  return result.has_value();              
+  return static_cast<bool>(result);              
 } 
 
 bool MonogodbClient::insertSession(const int userID, const int sessionID)
@@ -39,7 +39,7 @@ bool MonogodbClient::insertSession(const int userID, const int sessionID)
               << "sessionID" << sessionID;
 
   auto result = sessions_.insert_one(doc_builder << finalize);
-  return result.has_value();
+  return static_cast<bool>(result);
 }
 
   /* 查询消息 */

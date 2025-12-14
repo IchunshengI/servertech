@@ -1,0 +1,14 @@
+# docker-compose.yml（外层/主文件）
+include:
+  - ./web-back/docker-compose.yml
+
+networks:
+  servertech-net:
+    name: servertech-net
+    driver: bridge
+    attachable: true
+    ipam:
+      config:
+        - subnet: "172.21.0.0/24"
+          gateway: "172.21.0.1"
+          ip_range: "172.21.0.128/25"

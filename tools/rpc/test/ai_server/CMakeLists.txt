@@ -1,91 +1,93 @@
-# 设置C++20标准
+cmake_minimum_required(VERSION 3.20)
+
+# test 子目录一般不需要 project()，但写了也没事
+project(rpc_test_ai_server LANGUAGES CXX)
+
+# C++20
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE "Debug")
 
-# 为GCC/Clang添加协程支持
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options(-fcoroutines)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-# protobuf相关
-set(PROTOBUF_ROOT_DIR "/home/tlx/project/protobuf-30.2")
-set(PROTOBUF_INSTALL_DIR "${PROTOBUF_ROOT_DIR}/install")
-link_directories(
-  ${PROTOBUF_INSTALL_DIR}/lib
-)
+# GCC/Clang 协程支持（你要保留就保留）
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(-fcoroutines)
+endif()
 
-set(AI_SERVER_DIR "${CMAKE_SOURCE_DIR}/src/ai_server")
-include_directories(
-  ${PROTOBUF_INSTALL_DIR}/include  # Protobuf核心头文件
-  ${AI_SERVER_DIR}  # 生成的.pb.h文件路径
-)
-
-find_package(Boost REQUIRED COMPONENTS headers context coroutine json PATHS /usr/local/lib)
+# ---- 依赖（test 自己用到的才找）----
+find_package(Boost 1.86 REQUIRED COMPONENTS headers context coroutine json)
 find_package(OpenSSL REQUIRED)
-# 查找 mongocxx（依赖 bsoncxx 会自动找）
 find_package(mongocxx REQUIRED)
 find_package(Threads REQUIRED)
 
-add_executable(ai_server 
-               server.cpp
-               ${AI_SERVER_DIR}/ai_server_impl.cpp
-               ${AI_SERVER_DIR}/method_process.cpp
-               ${AI_SERVER_DIR}/ai_server.pb.cc
-               ${AI_SERVER_DIR}/redis_pool.cpp
-               ${AI_SERVER_DIR}/boost/boost_redis.cpp
-               ${AI_SERVER_DIR}/redis_client.cpp
-               ${AI_SERVER_DIR}/thread_poll/thread_poll.cpp
-               ${AI_SERVER_DIR}/mongodb/mongodb_client.cpp
-               ${CMAKE_SOURCE_DIR}/src/until/general.hpp
-               ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
-               )
+# 这里是 tools/rpc/src/ai_server 的源码目录
+set(AI_SERVER_DIR "${CMAKE_SOURCE_DIR}/src/ai_server")
 
+# ------------------- ai_server (测试用服务端) -------------------
+add_executable(ai_server
+  server.cpp
 
-# # 链接父项目的静态库
-target_link_libraries(ai_server PRIVATE 
-    rpc_static  # 直接使用父项目定义的库目标
-    OpenSSL::SSL
-    Boost::json
-    mongo::mongocxx_shared
-    mongo::bsoncxx_shared
-    Threads::Threads
+  ${AI_SERVER_DIR}/ai_server_impl.cpp
+  ${AI_SERVER_DIR}/method_process.cpp
+
+  ${AI_SERVER_DIR}/redis_pool.cpp
+  ${AI_SERVER_DIR}/boost/boost_redis.cpp
+  ${AI_SERVER_DIR}/redis_client.cpp
+
+  ${AI_SERVER_DIR}/thread_poll/thread_poll.cpp
+  ${AI_SERVER_DIR}/mongodb/mongodb_client.cpp
+
+  ${CMAKE_SOURCE_DIR}/src/until/base64.cpp
 )
-# 继承父项目的头文件路径（关键！）
+
 target_include_directories(ai_server PRIVATE
-    ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
-    /usr/local/include/mongocxx/v_noabi
-    /usr/local/include/bsoncxx/v_noabi
+  ${CMAKE_SOURCE_DIR}/src
+  ${AI_SERVER_DIR}
 )
-# 设置 ai_server 的输出目录为 bin/client
+
+# ✅ 关键：服务端用 rpc_server（不是 rpc_static）
+# ✅ pb 复用 ai_server_proto（不要再 protobuf_generate）
+target_link_libraries(ai_server PRIVATE
+  rpc_server
+  ai_server_proto
+
+  OpenSSL::SSL
+  Boost::json
+  mongo::mongocxx_shared
+  mongo::bsoncxx_shared
+  Threads::Threads
+)
+
 set_target_properties(ai_server PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/server"
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/server"
 )
-# 根据选项决定是否添加 DEBUG_LOG 宏
+
 if(ENABLE_DEBUG_INFO)
   target_compile_definitions(ai_server PRIVATE DEBUG_INFO)
 endif()
 
-add_executable(ai_client 
-               client.cpp 
-               ${CMAKE_SOURCE_DIR}/src/signal.hpp
-               ${CMAKE_SOURCE_DIR}/src/rpc_client.cpp
-               ${AI_SERVER_DIR}/ai_server.pb.cc)
-# # 链接父项目的静态库
-target_link_libraries(ai_client
-    PRIVATE 
-    rpc_static  # 直接使用父项目定义的库目标
-)
-# # 继承父项目的头文件路径（关键！）
-target_include_directories(ai_client
-    PRIVATE
-    ${CMAKE_SOURCE_DIR}/src  # 父项目源文件中的头文件
-)
-# 设置 ai_client 的输出目录为 bin/client
-set_target_properties(ai_client PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/client"
+# ------------------- ai_client (测试用客户端) -------------------
+add_executable(ai_client
+  client.cpp
 )
 
+target_include_directories(ai_client PRIVATE
+  ${CMAKE_SOURCE_DIR}/src
+  ${AI_SERVER_DIR}
+)
+
+# ✅ 关键：客户端用 rpc_client
+# ✅ 同样复用 ai_server_proto（需要 pb.h + pb.cc）
+target_link_libraries(ai_client PRIVATE
+  rpc_client
+  ai_server_proto
+)
+
+set_target_properties(ai_client PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/client"
+)
 
 # add_executable(test_function 
 #                test_function.cpp
