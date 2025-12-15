@@ -1,0 +1,35 @@
+services:
+  web-front-gpp:
+    build:
+      context: .
+      dockerfile: Dockerfile   # 就是你刚才新建的那个文件
+    image: web-front-dev # 给这个镜像起个名字，随便叫
+    container_name: web-front-gpp
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+
+    environment:
+      TZ: Asia/Shanghai
+      # 可选：国内加速 pip
+      PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+      PIP_DEFAULT_TIMEOUT: 100
+
+    volumes:
+      - ../../:/workspace
+
+      # 可选：加速 pip 缓存
+      - pip-cache:/root/.cache/pip
+
+    ports:
+      - "3000:3000"
+
+    networks:
+      - servertech-net
+
+
+volumes:
+  pip-cache:
+
+networks:
+  servertech-net: {}

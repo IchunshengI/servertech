@@ -17,6 +17,7 @@ public:
   void Start();
   void Create(const char *path, const char* data, int datalen, int state=0);
   std::string GetData(const char *path,watcher_fn watcher_cb, void* context);
+  std::string GetData(const char *path,const std::string& hash_key, watcher_fn watcher_cb, void* context);
   static void server_watcher(zhandle_t *zh, int type,
                     int state, const char* path __attribute__((unused)), 
                     void *watcherCtx __attribute__((unused))

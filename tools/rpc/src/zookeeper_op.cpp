@@ -3,7 +3,7 @@
 #include "zookeeper_op.h"
 #include "config/config.h"
 #include "log/logger_wrapper.h"
-
+#include "until/hash_ring.hpp"
 namespace rpc {
 using chat::LOG;
 
@@ -108,6 +108,55 @@ std::string ZkClient::GetData(const char *path, watcher_fn watcher_cb, void* con
       }
   }
   return std::string();
+}
+
+std::string ZkClient::GetData(
+    const char *path,
+    const std::string& hash_key,
+    watcher_fn watcher_cb,
+    void* context)
+{
+    String_vector children;
+    int flag = zoo_wget_children(
+        zhandle_, path, watcher_cb, context, &children);
+
+    if (flag != ZOK) {
+        LOG("Error") << "Failed to get children of " << path;
+        return std::string();
+    }
+
+    // 1. 收集所有实例 data
+    std::vector<std::string> instances;
+    for (int i = 0; i < children.count; ++i) {
+        std::string child_path = std::string(path) + "/" + children.data[i];
+
+        char buffer[128];
+        int buffer_len = sizeof(buffer);
+        flag = zoo_get(
+            zhandle_, child_path.c_str(), 0,
+            buffer, &buffer_len, nullptr);
+
+        if (flag == ZOK) {
+            instances.emplace_back(buffer, buffer_len);
+        } else {
+            LOG("Error") << "Failed to get data from " << child_path
+                         << " error: " << flag;
+        }
+    }
+
+    if (instances.empty()) {
+        return std::string();
+    }
+
+    // 2. 一致性哈希选实例
+    static ConsistentHashRing hash_ring(200); // 200 个虚拟节点
+    hash_ring.Build(instances);
+
+    try {
+        return hash_ring.GetNode(hash_key);
+    } catch (...) {
+        return std::string();
+    }
 }
 
 

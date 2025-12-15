@@ -37,6 +37,8 @@ add_library(rpc_client STATIC
   rpc_client.cpp
   zookeeper_op.cpp
   config/config.cpp
+  until/xxhash.cpp
+  
 )
 
 target_include_directories(rpc_client PUBLIC
@@ -64,6 +66,7 @@ add_library(rpc_server STATIC
   rpc_channel.cpp
   zookeeper_op.cpp
   config/config.cpp
+  until/xxhash.cpp
 )
 
 find_path(ZOOKEEPER_INCLUDE_DIR NAMES zookeeper/zookeeper.h)

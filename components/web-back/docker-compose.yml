@@ -1,6 +1,6 @@
 services:
   web-back-gpp:
-    image: server-chat-backend:20251215-ssh-clangd
+    image: server-chat-backend:20251215-ssh-clangd-v2
     container_name: web-back-gpp
     working_dir: /workspace
     tty: true
@@ -13,6 +13,7 @@ services:
       - servertech-net
     ports:
       - "2222:22"
+      - "8080:8080"
     command: >
       bash -lc "
       set -e;
@@ -20,3 +21,5 @@ services:
       /usr/sbin/sshd;
       exec sleep infinity
       "
+networks:
+  servertech-net: {}

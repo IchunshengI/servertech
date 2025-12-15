@@ -1,7 +1,10 @@
 # docker-compose.yml（外层/主文件）
 include:
   - ./web-back/docker-compose.yml
-
+  - ./web-front/docker-compose.yml
+  - ./mysql/docker-compose.yml
+  - ./redis/docker-compose.yml
+  - ./zookeeper/docker-compose.yml
 networks:
   servertech-net:
     name: servertech-net

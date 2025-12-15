@@ -1,0 +1,24 @@
+services:
+  zookeeper:
+    image: zookeeper:3.9
+    container_name: zookeeper-servertech
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_TICK_TIME: 2000
+      ZOO_INIT_LIMIT: 10
+      ZOO_SYNC_LIMIT: 5
+      ZOO_STANDALONE_ENABLED: "true"
+    volumes:
+      - zookeeper-data:/data
+      - zookeeper-datalog:/datalog
+    networks:
+      - servertech-net
+    restart: unless-stopped
+
+volumes:
+  zookeeper-data:
+  zookeeper-datalog:
+
+networks:
+  servertech-net: {}

@@ -37,8 +37,9 @@ public:
     void start_run() final override
     {
         // The host to connect to. Defaults to localhost
-        const char* host_c_str = std::getenv("REDIS_HOST");
-        std::string host = host_c_str ? host_c_str : "localhost";
+        // const char* host_c_str = std::getenv("REDIS_HOST");
+        // std::string host = host_c_str ? host_c_str : "localhost";
+        std::string host = "redis-servertech";
 
         boost::redis::config cfg;
         cfg.addr.host = std::move(host);

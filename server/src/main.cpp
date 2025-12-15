@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
     boost::asio::io_context ioc{1}; /* 异步运行时环境*/
 
     chat::InitLogger(ioc.get_executor());
-    chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
+    chat::Config::Instance().LoadConfigFile("/workspace/tools/rpc/test/doc/zoo.cfg");
     LOG("DEBUG") << "Success Init";
 
     // Singleton objects shared by all connections 所有连接的单例控制对象

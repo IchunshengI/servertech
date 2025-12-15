@@ -31,11 +31,21 @@
 // 导入开发环境镜像
 sudo docker load -i docker/server-chat-backend_20251215-ssh-clangd.tar
 cd components 
+// 创建数据卷 
+docker volume create serverchat-mysql-data
+// 启动所有组件 mysql、redis、zookeeper、web-back、web-front
 sudo docker compose up -d
 
 // 查看容器列表
 sudo docker ps
-// 进入容器 (进去后重置root密码)
+
+// 进入前端容器
+sudo docker exec -it web-front-gpp bash
+cd client
+npm install
+npm run dev // 启动前端3000端口
+
+// 进入后端容器 (进去后重置root密码)
 sudo docker exec -it web-back-gpp bash
 passwd root
 

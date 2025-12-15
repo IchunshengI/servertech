@@ -39,8 +39,8 @@ using namespace chat;
 // limit is difficult to get right.
 static constexpr std::string_view setup_code = R"SQL(
 
-CREATE DATABASE IF NOT EXISTS servertech_chat;
-USE servertech_chat;
+CREATE DATABASE IF NOT EXISTS serverchat;
+USE serverchat;
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(100) NOT NULL,
@@ -58,16 +58,17 @@ CREATE TABLE IF NOT EXISTS users (
 static boost::mysql::handshake_params default_handshake_params() noexcept
 {
     return boost::mysql::handshake_params(
-        "tlx",             // username
-        "hpcl6tlx",        // password
-        "servertech_chat"
+        "appuser",             // username
+        "apppass",        // password
+        "serverchat"
     );
 }
 // Returns the hostname to connect to. Defaults to localhost
 static std::string get_mysql_hostname()
 {
-    const char* host_c_str = std::getenv("MYSQL_HOST");
-    return host_c_str ? host_c_str : "localhost";
+    // const char* host_c_str = std::getenv("mysql-servertech");
+   // return host_c_str ? host_c_str : "127.0.0.1";
+    return "mysql-servertech";
 }
 
 

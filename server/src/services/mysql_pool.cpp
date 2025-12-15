@@ -77,19 +77,20 @@ bool mysql_pool::create_new_connection(boost::asio::yield_context yield){
     boost::asio::ip::tcp::resolver resolver(ex_);
     auto endpoints = resolver.async_resolve(host_, boost::mysql::default_port_string, yield[ec]);
     if (ec) {
-        std::cerr << "async_resolve error " << std::endl;
-        // if (handler) handler(ec, std::move(conn)); /* 这里必须用std::move，内部禁用了拷贝构造函数 */
-        return false;  
+        std::cerr << "mysql async_resolve error: " << ec.message() << std::endl;
+        total_count_.fetch_sub(1);
+        return false;
     }
     ec.clear();
     // /* 连接mysql */
     conn.async_connect(*endpoints.begin(), params_, diag,yield[ec]);
     //std::cout <<"连接成功" << std::endl;
-    if(ec){
-        std::cerr << "mysql async_connect error " << std::endl;
+    if (ec) {
+        std::cerr << "mysql async_connect error: " << ec.message()
+                  << " | server: " << diag.server_message() << std::endl;
+        total_count_.fetch_sub(1);
         return false;
     }
-
     /* 如果当前的连接没有大于最大连接数，就将当前的连接压进空闲连接中 */
     std::unique_lock<std::mutex> lock(mutex_);
     if(total_count_.load() < cfg_.max_connections){
