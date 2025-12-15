@@ -26,8 +26,23 @@
 
 # 编译说明
 
-需要提前安装好以下组件
+编译镜像存放位置[查看说明](docker/README.md)
+```cpp
+// 导入开发环境镜像
+sudo docker load -i docker/server-chat-backend_20251215-ssh-clangd.tar
+cd components 
+sudo docker compose up -d
 
-  boost Zookeeper protobuf redis mysql
+// 查看容器列表
+sudo docker ps
+// 进入容器 (进去后重置root密码)
+sudo docker exec -it web-back-gpp bash
+passwd root
+
+// 编译
+mkdir build && cd build
+cmake ..
+make 
+```
 
 其余部分补充中......

@@ -1,19 +1,22 @@
 services:
   web-back-gpp:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: web-back-gpp12-boost186
+    image: server-chat-backend:20251215-ssh-clangd
     container_name: web-back-gpp
     working_dir: /workspace
     tty: true
     stdin_open: true
-
     environment:
       TZ: Asia/Shanghai
-
     volumes:
       - ../../:/workspace
-
     networks:
       - servertech-net
+    ports:
+      - "2222:22"
+    command: >
+      bash -lc "
+      set -e;
+      /usr/sbin/sshd -t;
+      /usr/sbin/sshd;
+      exec sleep infinity
+      "
