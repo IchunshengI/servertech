@@ -37,6 +37,7 @@ public:
         } else {
           // 还未发信号 → 保存 handler 到 shared_ptr 中
           auto sp = std::make_shared<std::decay_t<decltype(self)>>(std::move(self));
+          // 这里应该也是要设置成原子变量？ 这个complete_
           complete_ = [sp, ex = ex_]() mutable {
             boost::asio::post(ex, [sp]() mutable {
               sp->complete();

@@ -20,6 +20,11 @@ find_package(Boost REQUIRED COMPONENTS headers context json regex url coroutine 
 find_package(OpenSSL REQUIRED)
 find_package(ICU COMPONENTS data i18n uc REQUIRED)
 
+# mongo-cxx-driver is typically installed under /usr/local in our dev container.
+#list(PREPEND CMAKE_PREFIX_PATH "/usr/local")
+find_package(mongocxx REQUIRED)
+find_package(bsoncxx REQUIRED)
+
 # ---- 主库 ----
 add_library(servertech_chat STATIC
   # Header-only libraries with optional separate-source mode
@@ -40,6 +45,7 @@ add_library(servertech_chat STATIC
   src/services/redis_serialization.cpp
   src/services/redis_client.cpp
   src/services/mysql_client.cpp
+  src/services/mongodb_client.cpp
   src/services/session_store.cpp
   src/services/cookie_auth_service.cpp
   src/services/room_history_service.cpp
@@ -83,6 +89,9 @@ target_link_libraries(servertech_chat
     ICU::data
     ICU::i18n
     ICU::uc
+
+    mongo::mongocxx_shared
+    mongo::bsoncxx_shared
 
     boost_charconv
     pthread

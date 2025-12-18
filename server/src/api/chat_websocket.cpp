@@ -28,6 +28,7 @@
 #include "business_types.hpp"
 #include "error.hpp"
 #include "services/cookie_auth_service.hpp"
+#include "services/mongodb_client.hpp"
 #include "services/pubsub_service.hpp"
 #include "services/redis_client.hpp"
 #include "services/room_history_service.hpp"
@@ -137,6 +138,10 @@ struct event_handler_visitor
         assert(msgs.size() == ids.size());
         for (std::size_t i = 0; i < msgs.size(); ++i)
             msgs[i].id = std::move(ids[i]);     //更新消息id
+
+        // Store it in MongoDB for persistence
+        if (auto mongo_err = st.mongodb().store_room_messages(evt.roomId, msgs); mongo_err.ec)
+            log_error(mongo_err, "MongoDB message persistence failed");
 
         // Compose a server_messages event with all data we have
         server_messages_event server_evt{evt.roomId, current_user, msgs};   //封装消息

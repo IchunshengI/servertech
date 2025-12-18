@@ -4,6 +4,8 @@ include:
   - ./web-front/docker-compose.yml
   - ./mysql/docker-compose.yml
   - ./redis/docker-compose.yml
+  - ./mongodb/docker-compose.yml
+  - ./rocketmq/docker-compose.yml
   - ./zookeeper/docker-compose.yml
 networks:
   servertech-net:

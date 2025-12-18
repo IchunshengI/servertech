@@ -1,0 +1,43 @@
+services:
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.2.0
+    container_name: rocketmq-namesrv-servertech
+    command: ["sh", "mqnamesrv"]
+    ports:
+      - "9876:9876"
+    networks:
+      - servertech-net
+    restart: unless-stopped
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.2.0
+    container_name: rocketmq-broker-servertech
+    depends_on:
+      - rocketmq-namesrv
+    command:
+      [
+        "sh",
+        "mqbroker",
+        "-n",
+        "rocketmq-namesrv:9876",
+        "-c",
+        "/home/rocketmq/rocketmq-5.2.0/conf/broker.conf"
+      ]
+    ports:
+      - "10911:10911"
+      - "10909:10909"
+    volumes:
+      - ./broker.conf:/home/rocketmq/rocketmq-5.2.0/conf/broker.conf:ro
+      - rocketmq-store:/home/rocketmq/store
+      - rocketmq-logs:/home/rocketmq/logs
+    networks:
+      - servertech-net
+    restart: unless-stopped
+
+volumes:
+  rocketmq-store:
+  rocketmq-logs:
+
+networks:
+  servertech-net: {}
+  extern: true
