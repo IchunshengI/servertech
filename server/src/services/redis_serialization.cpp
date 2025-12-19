@@ -227,6 +227,60 @@ result<std::vector<std::string>> chat::parse_string_array_response(node_span nod
     return res;
 }
 
+result<std::pair<std::vector<std::string>, std::vector<std::string>>> chat::parse_batch_id_pair_array_response(
+    node_span nodes
+)
+{
+    // Expected shape for each response:
+    // depth 0: array (size 2)
+    // depth 1: blob_string (redis_id)
+    // depth 1: blob_string (pending_id)
+    std::vector<std::string> ids;
+    std::vector<std::string> pending_ids;
+
+    std::string tmp_id;
+    std::string tmp_pending;
+    std::size_t seen_in_current = 0;
+
+    for (const auto& node : nodes)
+    {
+        if (node.depth == 0u)
+        {
+            if (node.data_type != resp3::type::array || node.aggregate_size != 2u)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            tmp_id.clear();
+            tmp_pending.clear();
+            seen_in_current = 0;
+            continue;
+        }
+
+        if (node.depth == 1u)
+        {
+            if (node.data_type != resp3::type::blob_string)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            if (seen_in_current == 0)
+                tmp_id = node.value;
+            else if (seen_in_current == 1)
+                tmp_pending = node.value;
+            ++seen_in_current;
+
+            if (seen_in_current == 2)
+            {
+                ids.push_back(std::move(tmp_id));
+                pending_ids.push_back(std::move(tmp_pending));
+                tmp_id.clear();
+                tmp_pending.clear();
+                seen_in_current = 0;
+            }
+        }
+    }
+
+    if (!tmp_id.empty() || !tmp_pending.empty())
+        CHAT_RETURN_ERROR(errc::redis_parse_error)
+
+    return std::pair{std::move(ids), std::move(pending_ids)};
+}
+
 result<std::vector<persist_pending_entry>> chat::parse_persist_pending_xrange_response(node_span nodes)
 {
     // XRANGE response:

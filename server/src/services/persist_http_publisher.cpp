@@ -89,7 +89,7 @@ error_with_message chat::publish_persist_http(
     stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
 
     if (res.result() != http::status::ok)
-        return error_with_message{errc::bad_request, "persist http non-200: " + std::to_string(res.result_int())};
+        return error_with_message{errc::http_request_failed, "persist http non-200: " + std::to_string(res.result_int())};
 
     return {};
 }

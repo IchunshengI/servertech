@@ -8,6 +8,7 @@
 #include "services/persist_pending_retry_service.hpp"
 
 #include <boost/asio/steady_timer.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/json/object.hpp>
 #include <boost/json/parse.hpp>
 #include <boost/json/value.hpp>
@@ -83,7 +84,8 @@ void persist_pending_retry_service::start()
     const auto interval_ms = getenv_i64("PERSIST_RETRY_INTERVAL_MS", 2000);
     const auto batch_size = static_cast<std::size_t>(getenv_i64("PERSIST_RETRY_BATCH", 50));
 
-    boost::asio::spawn(ex_, [stop_flag, redis, ex, interval_ms, batch_size](boost::asio::yield_context yield) {
+    auto strand = boost::asio::make_strand(ex_);
+    boost::asio::spawn(strand, [stop_flag, redis, ex, interval_ms, batch_size](boost::asio::yield_context yield) {
         boost::asio::steady_timer timer(ex);
         boost::system::error_code ec;
 

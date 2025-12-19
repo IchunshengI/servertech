@@ -30,7 +30,8 @@ BOOST_DESCRIBE_ENUM(
     requires_auth,
     invalid_base64,
     uncaught_exception,
-    invalid_content_type
+    invalid_content_type,
+    http_request_failed
 )
 
 }  // namespace chat

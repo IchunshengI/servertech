@@ -60,6 +60,7 @@ enum class errc
     invalid_base64,  // attempt to decode an invalid base64 string
     uncaught_exception,    // an API handler threw an unexpected exception
     invalid_content_type,  // an endpoint received an unsupported Content-Type
+    http_request_failed,   // an outbound HTTP request failed or returned non-OK
 };
 
 // The error category for errc

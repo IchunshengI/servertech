@@ -131,31 +131,30 @@ public:
         boost::asio::yield_context yield
     ) final override
     {
-        // Lua script: for each payload, XADD to room stream, then XADD to persist_pending with room_id+redis_id+payload.
+        // Lua script (single message):
+        // Atomically XADD to room stream and to persist_pending; returns {redis_id, pending_id}.
         static constexpr std::string_view script = R"lua(
 local room = KEYS[1]
 local pending = KEYS[2]
-local res = {}
-for i = 1, #ARGV do
-  local payload = ARGV[i]
-  local id = redis.call('XADD', room, '*', 'payload', payload)
-  local pid = redis.call('XADD', pending, '*', 'room_id', room, 'redis_id', id, 'payload', payload)
-  table.insert(res, id)
-  table.insert(res, pid)
-end
-return res
+local payload = ARGV[1]
+local id = redis.call('XADD', room, '*', 'payload', payload)
+local pid = redis.call('XADD', pending, '*', 'room_id', room, 'redis_id', id, 'payload', payload)
+return {id, pid}
 )lua";
 
+        // Batch multiple EVAL calls in a single roundtrip.
         boost::redis::request req;
-        req.push(
-            "EVAL",
-            script,
-            "2",
-            room_id,
-            k_persist_pending_stream
-        );
         for (const auto& msg : messages)
-            req.push(serialize_redis_message(msg));
+        {
+            req.push(
+                "EVAL",
+                script,
+                "2",
+                room_id,
+                k_persist_pending_stream,
+                serialize_redis_message(msg)
+            );
+        }
 
         boost::redis::generic_response res;
         error_code ec;
@@ -166,24 +165,14 @@ return res
         if (res.has_error())
             CHAT_RETURN_ERROR_WITH_MESSAGE(errc::redis_command_failed, std::move(res).error().diagnostic)
 
-        auto flat = parse_string_array_response(*res);
-        if (flat.has_error())
-            return error_with_message{flat.error()};
+        auto parsed = parse_batch_id_pair_array_response(*res);
+        if (parsed.has_error())
+            return error_with_message{parsed.error()};
 
-        if (flat->size() != messages.size() * 2)
+        if (parsed->first.size() != messages.size() || parsed->second.size() != messages.size())
             return error_with_message{errc::redis_parse_error, "Unexpected EVAL response size"};
 
-        std::vector<std::string> ids;
-        std::vector<std::string> pending_ids;
-        ids.reserve(messages.size());
-        pending_ids.reserve(messages.size());
-        for (std::size_t i = 0; i < flat->size(); i += 2)
-        {
-            ids.push_back(std::move((*flat)[i]));
-            pending_ids.push_back(std::move((*flat)[i + 1]));
-        }
-
-        return std::pair{std::move(ids), std::move(pending_ids)};
+        return *parsed;
     }
 
     result_with_message<std::vector<persist_pending_task>> get_persist_pending_tasks(
@@ -232,19 +221,17 @@ return res
             return {};
 
         boost::redis::request req;
-        req.push("XDEL", stream_key);
         for (const auto& id : entry_ids)
-            req.push(id);
+            req.push("XDEL", stream_key, id);
 
-        boost::redis::response<std::int64_t> res;
+        boost::redis::generic_response res;
         error_code ec;
         conn_.async_exec(req, res, yield[ec]);
         if (ec)
             return error_with_message{ec};
 
-        auto& result = std::get<0>(res);
-        if (result.has_error())
-            CHAT_RETURN_ERROR_WITH_MESSAGE(errc::redis_command_failed, std::move(result).error().diagnostic)
+        if (res.has_error())
+            CHAT_RETURN_ERROR_WITH_MESSAGE(errc::redis_command_failed, std::move(res).error().diagnostic)
 
         return {};
     }

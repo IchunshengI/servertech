@@ -39,6 +39,12 @@ result<std::vector<std::string>> parse_batch_xadd_response(node_span from);
 // of strings (used for Lua scripts).
 result<std::vector<std::string>> parse_string_array_response(node_span from);
 
+// Parses the result of batched Lua EVAL calls, where each EVAL returns a
+// 2-element array: [redis_id, pending_id].
+result<std::pair<std::vector<std::string>, std::vector<std::string>>> parse_batch_id_pair_array_response(
+    node_span from
+);
+
 // Entry in the persist_pending stream (used for persistence retries).
 struct persist_pending_entry
 {
