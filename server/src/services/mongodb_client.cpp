@@ -15,11 +15,13 @@
 #include <mongocxx/database.hpp>
 #include <mongocxx/exception/exception.hpp>
 #include <mongocxx/instance.hpp>
+#include <mongocxx/options/find.hpp>
 #include <mongocxx/uri.hpp>
 
 #include <boost/asio/any_io_executor.hpp>
 
 #include <cstdlib>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -70,7 +72,9 @@ public:
             }
 
             if (!docs.empty())
+            {
                 room_messages_.insert_many(std::move(docs));
+            }
 
             return {};
         }
@@ -81,6 +85,58 @@ public:
         catch (const std::exception& e)
         {
             return error_with_message{errc::uncaught_exception, std::string("MongoDB insert failed: ") + e.what()};
+        }
+    }
+
+    result_with_message<std::vector<message>> get_latest_room_messages(
+        std::string_view room_id,
+        std::size_t limit
+    ) override final
+    {
+        try
+        {
+            using bsoncxx::builder::basic::document;
+            using bsoncxx::builder::basic::kvp;
+
+            document filter;
+            filter.append(kvp("room_id", std::string(room_id)));
+
+            mongocxx::options::find opts;
+            opts.limit(static_cast<std::int64_t>(limit));
+            document sort_doc;
+            sort_doc.append(kvp("_id", -1));
+            opts.sort(sort_doc.extract());
+
+            std::vector<message> out;
+            out.reserve(limit);
+
+            auto cursor = room_messages_.find(filter.view(), opts);
+            for (auto&& doc : cursor)
+            {
+                auto redis_id_it = doc.find("redis_id");
+                std::string id = redis_id_it != doc.end() ? std::string(redis_id_it->get_string().value) :
+                                                           doc["_id"].get_oid().value.to_string();
+                const auto content = doc["content"].get_string().value;
+                const auto ts = doc["timestamp"].get_int64().value;
+                const auto user_id = doc["user_id"].get_int64().value;
+
+                out.push_back(message{
+                    std::move(id),
+                    std::string(content),
+                    parse_timestamp(ts),
+                    user_id,
+                });
+            }
+
+            return out;
+        }
+        catch (const mongocxx::exception& e)
+        {
+            return error_with_message{errc::uncaught_exception, std::string("MongoDB query failed: ") + e.what()};
+        }
+        catch (const std::exception& e)
+        {
+            return error_with_message{errc::uncaught_exception, std::string("MongoDB query failed: ") + e.what()};
         }
     }
 };

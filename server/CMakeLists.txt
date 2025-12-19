@@ -46,6 +46,8 @@ add_library(servertech_chat STATIC
   src/services/redis_client.cpp
   src/services/mysql_client.cpp
   src/services/mongodb_client.cpp
+  src/services/persist_http_publisher.cpp
+  src/services/persist_pending_retry_service.cpp
   src/services/session_store.cpp
   src/services/cookie_auth_service.cpp
   src/services/room_history_service.cpp

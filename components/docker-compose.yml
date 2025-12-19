@@ -6,6 +6,7 @@ include:
   - ./redis/docker-compose.yml
   - ./mongodb/docker-compose.yml
   - ./rocketmq/docker-compose.yml
+  - ./sync/docker-compose.yml
   - ./zookeeper/docker-compose.yml
 networks:
   servertech-net:

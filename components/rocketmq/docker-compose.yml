@@ -1,35 +1,55 @@
 services:
-  rocketmq-namesrv:
-    image: apache/rocketmq:5.2.0
-    container_name: rocketmq-namesrv-servertech
+  rocketmq-servertech:
+    image: apache/rocketmq:4.9.7
+    container_name: rocketmq-servertech
+    user: "0:0"
     command: ["sh", "mqnamesrv"]
     ports:
       - "9876:9876"
+    environment:
+      JAVA_OPT_EXT: "-server -Xms256m -Xmx256m -Xmn128m"
     networks:
       - servertech-net
     restart: unless-stopped
 
   rocketmq-broker:
-    image: apache/rocketmq:5.2.0
+    image: apache/rocketmq:4.9.7
     container_name: rocketmq-broker-servertech
+    user: "0:0"
     depends_on:
-      - rocketmq-namesrv
+      - rocketmq-servertech
+    environment:
+      NAMESRV_ADDR: rocketmq-servertech:9876
+      JAVA_OPT_EXT: "-server -Xms512m -Xmx512m -Xmn256m"
     command:
       [
         "sh",
         "mqbroker",
         "-n",
-        "rocketmq-namesrv:9876",
+        "rocketmq-servertech:9876",
         "-c",
-        "/home/rocketmq/rocketmq-5.2.0/conf/broker.conf"
+        "/home/rocketmq/rocketmq-4.9.7/conf/broker.conf"
       ]
     ports:
       - "10911:10911"
       - "10909:10909"
     volumes:
-      - ./broker.conf:/home/rocketmq/rocketmq-5.2.0/conf/broker.conf:ro
+      - ./broker.conf:/home/rocketmq/rocketmq-4.9.7/conf/broker.conf:ro
       - rocketmq-store:/home/rocketmq/store
       - rocketmq-logs:/home/rocketmq/logs
+    networks:
+      - servertech-net
+    restart: unless-stopped
+
+  rocketmq-console:
+    image: styletang/rocketmq-console-ng:latest
+    container_name: rocketmq-console-servertech
+    depends_on:
+      - rocketmq-servertech
+    environment:
+      JAVA_OPTS: "-Drocketmq.namesrv.addr=rocketmq-servertech:9876"
+    ports:
+      - "8090:8080"
     networks:
       - servertech-net
     restart: unless-stopped
@@ -39,5 +59,6 @@ volumes:
   rocketmq-logs:
 
 networks:
-  servertech-net: {}
-  extern: true
+  servertech-net:
+    external: true
+    name: servertech-net

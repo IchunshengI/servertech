@@ -12,6 +12,8 @@
 #include <boost/core/span.hpp>
 
 #include <memory>
+#include <string>
+#include <vector>
 #include <string_view>
 
 #include "business_types.hpp"
@@ -24,9 +26,17 @@ class mongodb_client
 public:
     virtual ~mongodb_client() {}
 
+    // Persists a batch of room messages. Messages are expected to have message.id set to
+    // the Redis stream ID (our hot-path identifier).
     virtual error_with_message store_room_messages(
         std::string_view room_id,
         boost::span<const message> messages
+    ) = 0;
+
+    // Retrieves the latest messages for a room, in reverse chronological order (newest first).
+    virtual result_with_message<std::vector<message>> get_latest_room_messages(
+        std::string_view room_id,
+        std::size_t limit
     ) = 0;
 };
 

@@ -1,0 +1,44 @@
+services:
+  sync-servertech:
+    build:
+      context: ../..
+      dockerfile: components/sync/Dockerfile
+      args:
+        http_proxy: http://172.31.225.139:7890
+        https_proxy: http://172.31.225.139:7890
+    image: servertech-sync:dev
+    container_name: sync-servertech
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+    environment:
+      TZ: Asia/Shanghai
+      NAMESRV_ADDR: rocketmq-servertech:9876
+      MQ_TOPIC: webchat_message
+      MQ_CONSUMER_GROUP: webchat_message_persist_group
+      MONGODB_URI: mongodb://root:root123456@mongodb-servertech:27017/?authSource=admin
+      MONGODB_DB: chat
+      MONGODB_COLLECTION: room_messages
+      http_proxy: http://172.31.225.139:7890
+      https_proxy: http://172.31.225.139:7890
+      HTTP_PROXY: http://172.31.225.139:7890
+      HTTPS_PROXY: http://172.31.225.139:7890
+      no_proxy: localhost,127.0.0.1,rocketmq-servertech,rocketmq-broker-servertech,mongodb-servertech
+      NO_PROXY: localhost,127.0.0.1,rocketmq-servertech,rocketmq-broker-servertech,mongodb-servertech
+    volumes:
+      - ../..:/workspace
+    networks:
+      - servertech-net
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    command: >
+      bash -lc "
+      set -e;
+      exec sleep infinity
+      "
+
+networks:
+  servertech-net:
+    external: true
+    name: servertech-net

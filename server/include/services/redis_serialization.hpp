@@ -11,6 +11,7 @@
 #include <boost/core/span.hpp>
 #include <boost/redis/resp3/node.hpp>
 
+#include <string>
 #include <vector>
 
 #include "business_types.hpp"
@@ -33,6 +34,24 @@ result<std::vector<message_batch>> parse_room_history_batch(node_span from);
 // doesn't work because Boost.Redis will attempt to parse a single response containing
 // an array of strings, instead of multiple responses with a single string
 result<std::vector<std::string>> parse_batch_xadd_response(node_span from);
+
+// Parses the response of a Redis EVAL returning a single top-level array
+// of strings (used for Lua scripts).
+result<std::vector<std::string>> parse_string_array_response(node_span from);
+
+// Entry in the persist_pending stream (used for persistence retries).
+struct persist_pending_entry
+{
+    std::string entry_id;
+    std::string room_id;
+    std::string redis_id;
+    std::string payload;
+};
+
+// Parses the response of:
+//   XRANGE persist_pending - + COUNT N
+// into a list of entries, preserving order.
+result<std::vector<persist_pending_entry>> parse_persist_pending_xrange_response(node_span from);
 
 // We store messages in streams as serialized JSON objects. Serialize
 // a message into its JSON representation

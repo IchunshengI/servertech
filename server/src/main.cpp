@@ -59,6 +59,7 @@ int main(int argc, char* argv[])
 
     // Launch the Redis connection
     st->redis().start_run();
+    st->start_background_tasks();
 
     // Start listening for HTTP connections. This will run until the context is stopped
     auto ec = launch_http_listener(ioc.get_executor(), listening_endpoint, st); // 对外提供服务的入口
@@ -73,6 +74,7 @@ int main(int argc, char* argv[])
         // Stop the Redis reconnection loop
         LOG("DEBUG") << "exec cancel";
         LoggerReset();
+        st->stop_background_tasks();
         st->redis().cancel();
 
         // Stop the io_context. This will cause run() to return

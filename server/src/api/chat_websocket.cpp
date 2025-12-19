@@ -11,9 +11,15 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/core/stream_traits.hpp>
+#include <boost/beast/http/read.hpp>
+#include <boost/beast/http/string_body.hpp>
+#include <boost/beast/http/write.hpp>
 #include <boost/beast/websocket/rfc6455.hpp>
 #include <boost/core/span.hpp>
+#include <boost/json/object.hpp>
+#include <boost/json/serialize.hpp>
 #include <boost/variant2/variant.hpp>
 
 #include <cstddef>
@@ -29,16 +35,55 @@
 #include "error.hpp"
 #include "services/cookie_auth_service.hpp"
 #include "services/mongodb_client.hpp"
+#include "services/persist_http_publisher.hpp"
 #include "services/pubsub_service.hpp"
 #include "services/redis_client.hpp"
 #include "services/room_history_service.hpp"
 #include "shared_state.hpp"
+#include "timestamp.hpp"
 #include "util/websocket.hpp"
 #include <boost/beast/websocket/error.hpp>
 #include "rpc/rpc_client.h"
 using namespace chat;
 
 namespace {
+
+static void persist_messages_via_http(
+    boost::asio::any_io_executor ex,
+    std::string_view room_id,
+    boost::span<const message> messages,
+    boost::span<const std::string> pending_ids,
+    redis_client& redis,
+    boost::asio::yield_context yield
+)
+{
+    for (const auto& msg : messages)
+    {
+        const auto msg_index = &msg - messages.data();
+
+        boost::json::object payload;
+        payload["room_id"] = room_id;
+        payload["redis_id"] = msg.id;
+        payload["content"] = msg.content;
+        payload["timestamp"] = serialize_timestamp(msg.timestamp);
+        payload["user_id"] = msg.user_id;
+
+        if (auto err = publish_persist_http(ex, payload, yield); err.ec)
+        {
+            log_error(err, "persist http");
+            continue;
+        }
+
+        if (msg_index < pending_ids.size())
+        {
+            std::array<std::string, 1> one{pending_ids[msg_index]};
+            auto del_err = redis.delete_stream_entries("persist_pending", one, yield);
+            if (del_err.ec)
+                log_error(del_err, "persist pending cleanup failed");
+        }
+
+    }
+}
 
 
  
@@ -80,7 +125,7 @@ struct hello_data
 static result_with_message<hello_data> get_hello_data(shared_state& st, boost::asio::yield_context yield)
 {
     // Retrieve room history
-    room_history_service history_service(st.redis(), st.mysql());
+    room_history_service history_service(st.redis(), st.mysql(), st.mongodb());
     auto history_result = history_service.get_room_history(room_ids, yield);
     if (history_result.has_error())
         return std::move(history_result).error();
@@ -128,20 +173,17 @@ struct event_handler_visitor
             });
         }
 
-        // Store it in Redis  2. 把消息存储到redis，使用redis的stream类型 参考：https://www.runoob.com/redis/redis-stream.html
-        auto ids_result = st.redis().store_messages(evt.roomId, msgs, yield); //返回消息id
+        // 1) Hot path: write to Redis first (IDs assigned by Redis Streams)
+        auto ids_result = st.redis().store_messages_with_pending(evt.roomId, msgs, yield);
         if (ids_result.has_error())
             return std::move(ids_result).error();
-        auto& ids = ids_result.value(); //获取到消息id
 
-        // Set the message IDs appropriately
-        assert(msgs.size() == ids.size());
+        auto& ids = ids_result->first;
+        auto& pending_ids = ids_result->second;
+        assert(ids.size() == msgs.size());
+        assert(pending_ids.size() == msgs.size());
         for (std::size_t i = 0; i < msgs.size(); ++i)
-            msgs[i].id = std::move(ids[i]);     //更新消息id
-
-        // Store it in MongoDB for persistence
-        if (auto mongo_err = st.mongodb().store_room_messages(evt.roomId, msgs); mongo_err.ec)
-            log_error(mongo_err, "MongoDB message persistence failed");
+            msgs[i].id = std::move(ids[i]);
 
         // Compose a server_messages event with all data we have
         server_messages_event server_evt{evt.roomId, current_user, msgs};   //封装消息
@@ -149,6 +191,10 @@ struct event_handler_visitor
         // Broadcast the event to all clients
         // ? 这里的广播是怎么回事？ 发布-订阅者模式？
         st.pubsub().publish(evt.roomId, server_evt.to_json());  //发送给所有的客户端
+
+        // 2) Persistence: write to Redis first, then ask the sync service to enqueue persistence via HTTP.
+        // Best-effort: do not fail the websocket flow if persistence fails.
+        persist_messages_via_http(ws.get_executor(), evt.roomId, msgs, pending_ids, st.redis(), yield);
         return {};
     }
 
@@ -156,7 +202,7 @@ struct event_handler_visitor
     error_with_message operator()(chat::request_room_history_event& evt) const
     {
         // Get room history
-        room_history_service svc(st.redis(), st.mysql());
+        room_history_service svc(st.redis(), st.mysql(), st.mongodb());
         auto history = svc.get_room_history(evt.roomId, yield);
         if (history.has_error())
             return std::move(history).error();

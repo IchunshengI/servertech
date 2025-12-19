@@ -18,6 +18,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <utility>
 
 #include "business_types.hpp"
 #include "error.hpp"
@@ -63,6 +64,45 @@ public:
     // Inserts a batch of messages into a certain room's history.
     // Returns the IDs of the inserted messages
     virtual result_with_message<std::vector<std::string>> store_messages(
+        std::string_view room_id,
+        boost::span<const message> messages,
+        boost::asio::yield_context yield
+    ) = 0;
+
+    // Atomically:
+    //  1) XADD to the room stream (auto-ID)
+    //  2) XADD a persistence task to a global pending stream ("persist_pending")
+    // Returns {room_stream_ids, pending_task_ids}, in the same order as messages.
+    virtual result_with_message<std::pair<std::vector<std::string>, std::vector<std::string>>> store_messages_with_pending(
+        std::string_view room_id,
+        boost::span<const message> messages,
+        boost::asio::yield_context yield
+    ) = 0;
+
+    // Retrieves up to `limit` oldest entries from the persistence pending stream.
+    struct persist_pending_task
+    {
+        std::string entry_id;
+        std::string room_id;
+        std::string redis_id;
+        std::string payload;
+    };
+
+    virtual result_with_message<std::vector<persist_pending_task>> get_persist_pending_tasks(
+        std::size_t limit,
+        boost::asio::yield_context yield
+    ) = 0;
+
+    // Deletes entries from a Redis stream key (XDEL).
+    virtual error_with_message delete_stream_entries(
+        std::string_view stream_key,
+        boost::span<const std::string> entry_ids,
+        boost::asio::yield_context yield
+    ) = 0;
+
+    // Inserts messages into a room's history using the message.id as Redis stream ID.
+    // Messages must be provided in chronological order (oldest first) and IDs must be increasing.
+    virtual error_with_message store_messages_with_ids(
         std::string_view room_id,
         boost::span<const message> messages,
         boost::asio::yield_context yield

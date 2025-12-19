@@ -23,14 +23,17 @@ namespace chat {
 
 class mysql_client;
 class redis_client;
+class mongodb_client;
 
 class room_history_service
 {
     redis_client* redis_;
     mysql_client* mysql_;
+    mongodb_client* mongodb_;
 
 public:
-    room_history_service(redis_client& redis, mysql_client& mysql) noexcept : redis_(&redis), mysql_(&mysql)
+    room_history_service(redis_client& redis, mysql_client& mysql, mongodb_client& mongodb) noexcept
+        : redis_(&redis), mysql_(&mysql), mongodb_(&mongodb)
     {
     }
 

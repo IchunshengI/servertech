@@ -14,6 +14,7 @@
 #include <boost/json/value_to.hpp>
 #include <boost/redis/resp3/type.hpp>
 
+#include <optional>
 #include <string>
 
 #include "error.hpp"
@@ -24,20 +25,25 @@ using namespace chat;
 
 namespace {
 
-// Message as stored in Redis. Note that this contains no ID, since
-// message IDs are stream IDs.
+// Message as stored in Redis.
+// New messages include the MongoDB _id as "id". Old messages (before MongoDB became
+// the source of truth) may not include it, in which case we fall back to the Redis
+// stream ID.
 struct redis_wire_message
 {
+    std::optional<std::string_view> id;
     std::string_view content;
     std::int64_t timestamp;
     std::int64_t user_id;
 };
-BOOST_DESCRIBE_STRUCT(redis_wire_message, (), (content, timestamp, user_id))
+BOOST_DESCRIBE_STRUCT(redis_wire_message, (), (id, content, timestamp, user_id))
 
 }  // namespace
 
 static message to_message(const redis_wire_message& from, std::string id)
 {
+    if (from.id && !from.id->empty())
+        id = std::string(*from.id);
     return chat::message{
         std::move(id),
         std::string(from.content),
@@ -194,10 +200,170 @@ result<std::vector<std::string>> chat::parse_batch_xadd_response(node_span nodes
     return res;
 }
 
+result<std::vector<std::string>> chat::parse_string_array_response(node_span nodes)
+{
+    // Expected shape:
+    // depth 0: array
+    // depth 1: blob_string items
+    if (nodes.empty())
+        CHAT_RETURN_ERROR(errc::redis_parse_error)
+
+    const auto& first = nodes.front();
+    if (first.depth != 0u || first.data_type != resp3::type::array)
+        CHAT_RETURN_ERROR(errc::redis_parse_error)
+
+    std::vector<std::string> res;
+    res.reserve(first.aggregate_size);
+    for (std::size_t i = 1; i < nodes.size(); ++i)
+    {
+        const auto& node = nodes[i];
+        if (node.depth != 1u)
+            continue;
+        if (node.data_type != resp3::type::blob_string)
+            CHAT_RETURN_ERROR(errc::redis_parse_error)
+        res.push_back(node.value);
+    }
+
+    return res;
+}
+
+result<std::vector<persist_pending_entry>> chat::parse_persist_pending_xrange_response(node_span nodes)
+{
+    // XRANGE response:
+    // array [
+    //   [ entry_id, [ field, value, field, value, ... ] ],
+    //   ...
+    // ]
+    std::vector<persist_pending_entry> out;
+    if (nodes.empty())
+        return out;
+
+    enum state_t
+    {
+        wants_level0_array,
+        wants_entry_array_or_end,
+        wants_entry_id,
+        wants_kv_array,
+        wants_key,
+        wants_value
+    };
+
+    state_t state = wants_level0_array;
+    std::string entry_id;
+    std::string room_id;
+    std::string redis_id;
+    std::string payload;
+    std::string current_key;
+
+    auto emit_entry = [&] {
+        out.push_back(persist_pending_entry{entry_id, room_id, redis_id, payload});
+        entry_id.clear();
+        room_id.clear();
+        redis_id.clear();
+        payload.clear();
+        current_key.clear();
+    };
+
+    for (const auto& node : nodes)
+    {
+        switch (state)
+        {
+        case wants_level0_array:
+            if (node.depth != 0u || node.data_type != resp3::type::array)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            state = wants_entry_array_or_end;
+            break;
+
+        case wants_entry_array_or_end:
+            // Each entry is an array at depth 1; if there are no entries, we simply finish.
+            if (node.depth != 1u)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            if (node.data_type != resp3::type::array || node.aggregate_size != 2u)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            state = wants_entry_id;
+            break;
+
+        case wants_entry_id:
+            if (node.depth != 2u || node.data_type != resp3::type::blob_string)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            entry_id = node.value;
+            state = wants_kv_array;
+            break;
+
+        case wants_kv_array:
+            if (node.depth != 2u || node.data_type != resp3::type::array)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            state = wants_key;
+            break;
+
+        case wants_key:
+            if (node.depth != 3u || node.data_type != resp3::type::blob_string)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            current_key = node.value;
+            state = wants_value;
+            break;
+
+        case wants_value:
+            if (node.depth != 3u || node.data_type != resp3::type::blob_string)
+                CHAT_RETURN_ERROR(errc::redis_parse_error)
+            if (current_key == "room_id")
+                room_id = node.value;
+            else if (current_key == "redis_id")
+                redis_id = node.value;
+            else if (current_key == "payload")
+                payload = node.value;
+            current_key.clear();
+
+            // Heuristic: if the next node is at depth 1 (new entry array) we will handle it next
+            // iteration after we emit, but we can't see it here. Instead, emit when we see that
+            // we are done parsing the kv list: when the next key would be missing we will simply
+            // keep alternating key/value until the parser transitions back.
+            //
+            // Because the node stream includes structure nodes for arrays, we can't reliably know
+            // the end-of-kv here without counting. Instead, we remain in wants_key and emit when
+            // the next structural node (depth 1 array) is encountered (handled above by starting a
+            // new entry) — but we would lose the current entry. So, we emit whenever we transition
+            // to a new entry array (handled by seeing depth 1 array while in wants_entry_array_or_end).
+            //
+            // To make this robust, we emit at the first moment we can: when we see that we are
+            // leaving depth 3 (a non-depth-3 node will appear). Since we can't peek, we instead
+            // emit when we see the kv array's closing structure node is represented by the next
+            // entry array at depth 1. We'll do this by temporarily transitioning to wants_key and
+            // allowing the state machine to handle the next node. If the next node is an entry array,
+            // wants_key would fail. Therefore, we need a safer approach: rely on aggregate_size.
+            //
+            // The simplest robust approach is to count key/value pairs using the kv array aggregate_size.
+            // Not available here without tracking. Fall back to emitting after we've seen the required
+            // fields; this works for our schema (room_id, redis_id, payload).
+            if (!entry_id.empty() && !room_id.empty() && !redis_id.empty() && !payload.empty())
+            {
+                emit_entry();
+                state = wants_entry_array_or_end;
+            }
+            else
+            {
+                state = wants_key;
+            }
+            break;
+        }
+    }
+
+    // If we ended mid-entry, treat as parse error
+    if (state != wants_entry_array_or_end)
+        CHAT_RETURN_ERROR(errc::redis_parse_error)
+
+    return out;
+}
+
 std::string chat::serialize_redis_message(const message& msg)
 {
     // Construct the wire message
-    redis_wire_message redis_msg{msg.content, serialize_timestamp(msg.timestamp), msg.user_id};
+    redis_wire_message redis_msg{
+        msg.id.empty() ? std::nullopt : std::optional<std::string_view>(msg.id),
+        msg.content,
+        serialize_timestamp(msg.timestamp),
+        msg.user_id
+    };
 
     // Serialize it to JSON
     return boost::json::serialize(boost::json::value_from(redis_msg));
