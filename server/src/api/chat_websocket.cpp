@@ -22,6 +22,7 @@
 #include <boost/json/serialize.hpp>
 #include <boost/variant2/variant.hpp>
 
+#include <array>
 #include <cstddef>
 #include <future>
 #include <memory>
@@ -48,18 +49,23 @@ using namespace chat;
 
 namespace {
 
-static void persist_messages_via_http(
+// Publishes persistence tasks to the sync service via HTTP.
+// On publish success, deletes the associated entry from persist_pending.
+// On publish failure, rolls back both the room stream entry and the pending entry,
+// and removes the message from `messages` so it won't be broadcast.
+// Returns an error only if all messages fail to be published.
+static error_with_message persist_messages_via_http(
     boost::asio::any_io_executor ex,
     std::string_view room_id,
-    boost::span<const message> messages,
-    boost::span<const std::string> pending_ids,
+    std::vector<message>& messages,
+    std::vector<std::string>& pending_ids,
     redis_client& redis,
     boost::asio::yield_context yield
 )
 {
-    for (const auto& msg : messages)
+    for (std::size_t i = 0; i < messages.size();)
     {
-        const auto msg_index = &msg - messages.data();
+        const auto& msg = messages[i];
 
         boost::json::object payload;
         payload["room_id"] = room_id;
@@ -71,18 +77,44 @@ static void persist_messages_via_http(
         if (auto err = publish_persist_http(ex, payload, yield); err.ec)
         {
             log_error(err, "persist http");
+            // Roll back the redis entries so we don't broadcast a message that
+            // can't be durably persisted.
+            {
+                std::array<std::string, 1> one{msg.id};
+                auto del_err = redis.delete_stream_entries(room_id, one, yield);
+                if (del_err.ec)
+                    log_error(del_err, "Redis rollback (room stream) failed");
+            }
+
+            if (i < pending_ids.size())
+            {
+                std::array<std::string, 1> one{pending_ids[i]};
+                auto del_err = redis.delete_stream_entries("persist_pending", one, yield);
+                if (del_err.ec)
+                    log_error(del_err, "Redis rollback (persist_pending) failed");
+            }
+
+            // Drop the message from the batch
+            messages.erase(messages.begin() + static_cast<std::ptrdiff_t>(i));
+            if (i < pending_ids.size())
+                pending_ids.erase(pending_ids.begin() + static_cast<std::ptrdiff_t>(i));
             continue;
         }
 
-        if (msg_index < pending_ids.size())
+        if (i < pending_ids.size())
         {
-            std::array<std::string, 1> one{pending_ids[msg_index]};
+            std::array<std::string, 1> one{pending_ids[i]};
             auto del_err = redis.delete_stream_entries("persist_pending", one, yield);
             if (del_err.ec)
                 log_error(del_err, "persist pending cleanup failed");
         }
 
+        ++i;
     }
+
+    if (messages.empty())
+        return error_with_message{errc::http_request_failed, "Message persistence enqueue failed"};
+    return {};
 }
 
 
@@ -185,16 +217,20 @@ struct event_handler_visitor
         for (std::size_t i = 0; i < msgs.size(); ++i)
             msgs[i].id = std::move(ids[i]);
 
+        // 2) Persistence gate: publish to the sync service before broadcasting.
+        // This avoids broadcasting messages that cannot be enqueued for durability.
+        if (auto err = persist_messages_via_http(ws.get_executor(), evt.roomId, msgs, pending_ids, st.redis(), yield);
+            err.ec)
+        {
+            return err;
+        }
+
         // Compose a server_messages event with all data we have
         server_messages_event server_evt{evt.roomId, current_user, msgs};   //封装消息
 
         // Broadcast the event to all clients
         // ? 这里的广播是怎么回事？ 发布-订阅者模式？
         st.pubsub().publish(evt.roomId, server_evt.to_json());  //发送给所有的客户端
-
-        // 2) Persistence: write to Redis first, then ask the sync service to enqueue persistence via HTTP.
-        // Best-effort: do not fail the websocket flow if persistence fails.
-        persist_messages_via_http(ws.get_executor(), evt.roomId, msgs, pending_ids, st.redis(), yield);
         return {};
     }
 
