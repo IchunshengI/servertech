@@ -8,7 +8,11 @@
 #include "signal.hpp"
 namespace rpc {
 
-RpcClient::RpcClient(boost::asio::any_io_executor ex) : ex_(ex)
+RpcClient::RpcClient(boost::asio::any_io_executor ex) : RpcClient(std::move(ex), {})
+{
+}
+
+RpcClient::RpcClient(boost::asio::any_io_executor ex, std::string token) : ex_(ex), token_(std::move(token))
 {
   channel_ = rpc::create_rpc_channel("AiServer", ex_);
   controller_ = std::make_shared<RpcController>();
@@ -19,47 +23,6 @@ RpcClient::~RpcClient()
 {
 
 }
-
-awaitable<bool> RpcClient::SetInitInfo(uint32_t user_id, uint32_t session_id, std::string api_key)
-{
-  bool flag = true;
-  auto request = std::make_shared<InitRequest>();
-  auto response = std::make_shared<GeneralResponse>();
-  request->set_user_id(user_id);
-  request->set_session_id(session_id);
-  request->set_api_key(api_key);
-
-  auto error = co_await channel_->Start();
-  if(error.ec){
-    std::cout << "错误! " << error.msg << std::endl;
-    co_return false;
-  }
-  
-  auto signal = std::make_shared<chat::SimpleSignal>(ex_);
-
-  auto* closure = rpc::RpcClosure::Create(
-    [&](){               
-      if (controller_->Failed()) {
-        chat::LOG("Error") << "RPC Failed: " << controller_->ErrorText() << std::endl;
-        flag = false;
-      } 
-
-      token_ = response->respon_message();
-      signal->Signal();      
-    });
-  // 使用protobuf自动生成的存根类
-  //AiServer_Stub stub(channel_.get());
-  ai_server_stub_->SetInitInfo(
-    controller_.get(),
-    request.get(),
-    response.get(),
-    closure);
-  co_await signal->Wait();
-  if (!flag) co_return false;
-  co_return true;
-}
-
-
 
 awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
 {
@@ -74,6 +37,14 @@ awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
   //AiServer_Stub stub(channel_.get());
 
   auto signal = std::make_shared<chat::SimpleSignal>(ex_);
+  if (!started_)
+  {
+    auto error = co_await channel_->Start();
+    if(error.ec){
+      co_return rpc::error_with_message{rpc::errc::rpc_error, error.msg};
+    }
+    started_ = true;
+  }
   auto* closure = rpc::RpcClosure::Create(
     [&]() {
       if (controller_->Failed()) {
@@ -93,4 +64,3 @@ awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
 }
 
 } // namespace rpc 
-

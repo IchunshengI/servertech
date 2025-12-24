@@ -65,58 +65,29 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
             ::google::protobuf::Closure* done
             )
 {
-  boost::asio::co_spawn(
-    ex_,
-    [=,this]() -> boost::asio::awaitable<void> {
+	  boost::asio::co_spawn(
+	    ex_,
+	    [=,this]() -> boost::asio::awaitable<void> {
 
-      auto query = std::make_shared<std::string>(request->query_message());
-      std::shared_ptr<std::string> respon_data; 
-      std::string token = request->token();
-      auto result = co_await redis_client_->GetSessionInfo(token);
+	      auto query = std::make_shared<std::string>(request->query_message());
+	      const std::string api_key = request->token();
 
     //   boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
     //   timer.expires_after(std::chrono::seconds(10));
     //   co_await timer.async_wait();
       
-      /* 处理apikey的获取结果*/
-      if (result.has_error())
-      {
-        if (result.error().ec == rpc::errc::not_found) /* 有错误直接回发 */
-        {
-          response->set_respon_message("can not found api key"); 
-        }else{
-          response->set_respon_message("server error, please try again");
-        }
-      } else{
-        SessionInfo session_info = result.value();
-        /* 云端服务调用 */
-        auto call_result = co_await method_process_.CallModelByHttps(*query, session_info.api_key_);
-        if (call_result.has_error()) {
-          LOG("Error") << "CallModelByhttps error : " << call_result.error().message();
-          response->set_respon_message(call_result.error().message());
-        } else {
-          response->set_respon_message(call_result.value());
-          // 移动 string 到 shared_ptr 中
-          respon_data = std::make_shared<std::string>(std::move(call_result.value()));
-        }        
+	      /* 云端服务调用 */
+	      auto call_result = co_await method_process_.CallModelByHttps(*query, api_key);
+	      if (call_result.has_error()) {
+	        LOG("Error") << "CallModelByhttps error : " << call_result.error().message();
+	        response->set_respon_message(call_result.error().message());
+	      } else {
+	        response->set_respon_message(call_result.value());
+	      }
 
-        
-        /* 这里做入库操作 */
-        //monogodb_client_ptr_->insertMessage();
-         monogodb_client_ptr_->insertMessage(session_info.user_id_,
-                                             session_info.session_id_,
-                                             "user",
-                                             *query);
-         monogodb_client_ptr_->insertMessage(session_info.user_id_,
-                                             session_info.session_id_,
-                                             "root",
-                                             *respon_data);                                             
-                                             
-      }
-
-      delete request;
-      delete controller;
-      done->Run();
+	      delete request;
+	      delete controller;
+	      done->Run();
 
       co_return;
     },

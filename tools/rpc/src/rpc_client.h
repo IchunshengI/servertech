@@ -24,10 +24,10 @@ class RpcClient{
 
 public:
   RpcClient(boost::asio::any_io_executor ex);
+  RpcClient(boost::asio::any_io_executor ex, std::string token);
   ~RpcClient();
 
-  // 这两个都要设置成协程接口的形式
-  awaitable<bool> SetInitInfo(uint32_t user_id, uint32_t session_id, std::string api_key);
+  // token is provided at construction time (e.g. api_key).
   awaitable<result_with_message<std::string>> Query(std::string query);
 private:
   boost::asio::any_io_executor ex_;
@@ -35,7 +35,7 @@ private:
   std::shared_ptr<RpcChannel> channel_;
   std::shared_ptr<AiServer_Stub> ai_server_stub_;
   std::string token_;  
+  bool started_{false};
 };
 
 }
-

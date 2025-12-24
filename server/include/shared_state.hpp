@@ -19,10 +19,8 @@ namespace chat {
 class session_map;
 class redis_client;
 class mysql_client;
-class mongodb_client;
 class cookie_auth_service;
 class pubsub_service;
-class persist_pending_retry_service;
 
 // Contains singleton objects shared by all sessions in the server
 class shared_state
@@ -32,10 +30,8 @@ class shared_state
         std::string doc_root_;
         std::unique_ptr<redis_client> redis_;
         std::unique_ptr<mysql_client> mysql_;
-        std::unique_ptr<mongodb_client> mongodb_;
         std::unique_ptr<cookie_auth_service> cookie_auth_;
         std::unique_ptr<pubsub_service> pubsub_;
-        std::unique_ptr<persist_pending_retry_service> persist_retry_;
     } impl_;
 
 public:
@@ -49,13 +45,11 @@ public:
     const std::string& doc_root() const noexcept { return impl_.doc_root_; }
     redis_client& redis() noexcept { return *impl_.redis_; }
     mysql_client& mysql() noexcept { return *impl_.mysql_; }
-    mongodb_client& mongodb() noexcept { return *impl_.mongodb_; }
     cookie_auth_service& cookie_auth() noexcept { return *impl_.cookie_auth_; }
     pubsub_service& pubsub() noexcept { return *impl_.pubsub_; }
 
-    // Starts background tasks that depend on Redis being connected.
-    void start_background_tasks();
-    void stop_background_tasks();
+    void start_background_tasks() {}
+    void stop_background_tasks() {}
 };
 
 }  // namespace chat

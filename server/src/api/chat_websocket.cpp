@@ -23,9 +23,15 @@
 #include <boost/variant2/variant.hpp>
 
 #include <array>
+#include <chrono>
+#include <cstdint>
 #include <cstddef>
+#include <filesystem>
+#include <fstream>
 #include <future>
 #include <memory>
+#include <mutex>
+#include <random>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -35,7 +41,6 @@
 #include "business_types.hpp"
 #include "error.hpp"
 #include "services/cookie_auth_service.hpp"
-#include "services/mongodb_client.hpp"
 #include "services/persist_http_publisher.hpp"
 #include "services/pubsub_service.hpp"
 #include "services/redis_client.hpp"
@@ -44,76 +49,184 @@
 #include "timestamp.hpp"
 #include "util/websocket.hpp"
 #include <boost/beast/websocket/error.hpp>
-#include "rpc/rpc_client.h"
+#include "rpc_client.h"
 using namespace chat;
 
 namespace {
 
-// Publishes persistence tasks to the sync service via HTTP.
-// On publish success, deletes the associated entry from persist_pending.
-// On publish failure, rolls back both the room stream entry and the pending entry,
-// and removes the message from `messages` so it won't be broadcast.
-// Returns an error only if all messages fail to be published.
-static error_with_message persist_messages_via_http(
+static std::array<unsigned char, 6> get_uuid_v1_node_id()
+{
+    static std::once_flag once;
+    static std::array<unsigned char, 6> cached{};
+
+    std::call_once(once, [] {
+        auto hexval = [](char c) -> int {
+            if (c >= '0' && c <= '9')
+                return c - '0';
+            if (c >= 'a' && c <= 'f')
+                return 10 + (c - 'a');
+            if (c >= 'A' && c <= 'F')
+                return 10 + (c - 'A');
+            return -1;
+        };
+
+        auto parse_mac = [&](const std::string& s, std::array<unsigned char, 6>& out) -> bool {
+            // Expected: "aa:bb:cc:dd:ee:ff"
+            if (s.size() < 17)
+                return false;
+            for (int i = 0; i < 6; ++i)
+            {
+                const std::size_t pos = static_cast<std::size_t>(i * 3);
+                const int hi = hexval(s[pos]);
+                const int lo = hexval(s[pos + 1]);
+                if (hi < 0 || lo < 0)
+                    return false;
+                out[i] = static_cast<unsigned char>((hi << 4) | lo);
+                if (i < 5 && s[pos + 2] != ':')
+                    return false;
+            }
+            return true;
+        };
+
+        // Best-effort MAC retrieval on Linux via sysfs.
+        // If not available, fall back to a random node id (RFC 4122 sets multicast bit to 1).
+        try
+        {
+            for (const auto& entry : std::filesystem::directory_iterator("/sys/class/net"))
+            {
+                const auto ifname = entry.path().filename().string();
+                if (ifname == "lo")
+                    continue;
+                std::ifstream in(entry.path() / "address");
+                if (!in)
+                    continue;
+                std::string mac;
+                std::getline(in, mac);
+                std::array<unsigned char, 6> node{};
+                if (parse_mac(mac, node))
+                {
+                    bool all_zero = true;
+                    for (auto b : node)
+                        all_zero = all_zero && (b == 0);
+                    if (!all_zero)
+                    {
+                        cached = node;
+                        return;
+                    }
+                }
+            }
+        }
+        catch (...)
+        {
+        }
+
+        std::random_device rd;
+        for (auto& b : cached)
+            b = static_cast<unsigned char>(rd());
+        cached[0] |= 0x01; // multicast bit => random node id
+    });
+
+    return cached;
+}
+
+static std::string make_uuid_v1()
+{
+    // UUID v1 (RFC 4122): time-based (100ns intervals since 1582-10-15) + clock sequence + node id (MAC).
+    // We use MAC when available; otherwise we generate a random node id.
+    static std::mutex mu;
+    static std::uint64_t last_ts_100ns = 0;
+    static std::uint16_t clock_seq = 0;
+    static bool clock_seq_init = false;
+
+    // 100ns ticks since UUID epoch.
+    constexpr std::uint64_t k_uuid_epoch_offset_100ns = 0x01B21DD213814000ULL; // 1582-10-15 to 1970-01-01
+    const auto now = std::chrono::system_clock::now();
+    const auto since_unix = now.time_since_epoch();
+    const auto now_100ns =
+        static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(since_unix).count() / 100);
+
+    std::uint64_t ts;
+    {
+        std::lock_guard<std::mutex> lk(mu);
+        ts = now_100ns + k_uuid_epoch_offset_100ns;
+
+        if (!clock_seq_init)
+        {
+            std::random_device rd;
+            clock_seq = static_cast<std::uint16_t>(rd()) & 0x3FFF;
+            clock_seq_init = true;
+        }
+
+        if (ts <= last_ts_100ns)
+            clock_seq = static_cast<std::uint16_t>((clock_seq + 1) & 0x3FFF);
+        last_ts_100ns = ts;
+    }
+
+    const std::uint32_t time_low = static_cast<std::uint32_t>(ts & 0xFFFFFFFFULL);
+    const std::uint16_t time_mid = static_cast<std::uint16_t>((ts >> 32) & 0xFFFFULL);
+    const std::uint16_t time_hi = static_cast<std::uint16_t>((ts >> 48) & 0x0FFFULL);
+    const std::uint16_t time_hi_and_version = static_cast<std::uint16_t>(time_hi | 0x1000U); // version 1
+
+    const std::uint8_t clk_seq_hi = static_cast<std::uint8_t>(((clock_seq >> 8) & 0x3FU) | 0x80U); // variant 1
+    const std::uint8_t clk_seq_lo = static_cast<std::uint8_t>(clock_seq & 0xFFU);
+
+    const auto node = get_uuid_v1_node_id();
+
+    std::array<unsigned char, 16> bytes{};
+    bytes[0] = static_cast<unsigned char>((time_low >> 24) & 0xFF);
+    bytes[1] = static_cast<unsigned char>((time_low >> 16) & 0xFF);
+    bytes[2] = static_cast<unsigned char>((time_low >> 8) & 0xFF);
+    bytes[3] = static_cast<unsigned char>((time_low)&0xFF);
+    bytes[4] = static_cast<unsigned char>((time_mid >> 8) & 0xFF);
+    bytes[5] = static_cast<unsigned char>((time_mid)&0xFF);
+    bytes[6] = static_cast<unsigned char>((time_hi_and_version >> 8) & 0xFF);
+    bytes[7] = static_cast<unsigned char>((time_hi_and_version)&0xFF);
+    bytes[8] = clk_seq_hi;
+    bytes[9] = clk_seq_lo;
+    for (int i = 0; i < 6; ++i)
+        bytes[10 + i] = node[i];
+
+    auto hex = [](unsigned char v) -> char {
+        static constexpr char k[] = "0123456789abcdef";
+        return k[v & 0x0F];
+    };
+
+    std::string out;
+    out.reserve(36);
+    for (int i = 0; i < 16; ++i)
+    {
+        if (i == 4 || i == 6 || i == 8 || i == 10)
+            out.push_back('-');
+        out.push_back(hex(bytes[i] >> 4));
+        out.push_back(hex(bytes[i]));
+    }
+    return out;
+}
+
+// Publishes messages to the sync service (MQ gateway) via HTTP.
+// This is a required step before broadcasting to clients.
+static error_with_message publish_messages_via_http_required(
     boost::asio::any_io_executor ex,
     std::string_view room_id,
     std::vector<message>& messages,
-    std::vector<std::string>& pending_ids,
-    redis_client& redis,
     boost::asio::yield_context yield
 )
 {
-    for (std::size_t i = 0; i < messages.size();)
+    for (std::size_t i = 0; i < messages.size(); ++i)
     {
         const auto& msg = messages[i];
 
         boost::json::object payload;
         payload["room_id"] = room_id;
-        payload["redis_id"] = msg.id;
+        payload["uuid"] = msg.id; // uuid as the message id + MQ idempotency key
         payload["content"] = msg.content;
         payload["timestamp"] = serialize_timestamp(msg.timestamp);
         payload["user_id"] = msg.user_id;
 
         if (auto err = publish_persist_http(ex, payload, yield); err.ec)
-        {
-            log_error(err, "persist http");
-            // Roll back the redis entries so we don't broadcast a message that
-            // can't be durably persisted.
-            {
-                std::array<std::string, 1> one{msg.id};
-                auto del_err = redis.delete_stream_entries(room_id, one, yield);
-                if (del_err.ec)
-                    log_error(del_err, "Redis rollback (room stream) failed");
-            }
-
-            if (i < pending_ids.size())
-            {
-                std::array<std::string, 1> one{pending_ids[i]};
-                auto del_err = redis.delete_stream_entries("persist_pending", one, yield);
-                if (del_err.ec)
-                    log_error(del_err, "Redis rollback (persist_pending) failed");
-            }
-
-            // Drop the message from the batch
-            messages.erase(messages.begin() + static_cast<std::ptrdiff_t>(i));
-            if (i < pending_ids.size())
-                pending_ids.erase(pending_ids.begin() + static_cast<std::ptrdiff_t>(i));
-            continue;
-        }
-
-        if (i < pending_ids.size())
-        {
-            std::array<std::string, 1> one{pending_ids[i]};
-            auto del_err = redis.delete_stream_entries("persist_pending", one, yield);
-            if (del_err.ec)
-                log_error(del_err, "persist pending cleanup failed");
-        }
-
-        ++i;
+            return err;
     }
 
-    if (messages.empty())
-        return error_with_message{errc::http_request_failed, "Message persistence enqueue failed"};
     return {};
 }
 
@@ -157,7 +270,7 @@ struct hello_data
 static result_with_message<hello_data> get_hello_data(shared_state& st, boost::asio::yield_context yield)
 {
     // Retrieve room history
-    room_history_service history_service(st.redis(), st.mysql(), st.mongodb());
+    room_history_service history_service(st.redis(), st.mysql());
     auto history_result = history_service.get_room_history(room_ids, yield);
     if (history_result.has_error())
         return std::move(history_result).error();
@@ -198,30 +311,17 @@ struct event_handler_visitor
         for (auto& msg : evt.messages)
         {
             msgs.push_back(message{ //1.先把消息存储到std::vector<message> msgs;
-                "",  // blank ID, will be assigned by Redis
+                make_uuid_v1(),
                 std::move(msg.content),
                 timestamp,
                 current_user.id,
             });
         }
 
-        // 1) Hot path: write to Redis first (IDs assigned by Redis Streams)
-        auto ids_result = st.redis().store_messages_with_pending(evt.roomId, msgs, yield);
-        if (ids_result.has_error())
-            return std::move(ids_result).error();
-
-        auto& ids = ids_result->first;
-        auto& pending_ids = ids_result->second;
-        assert(ids.size() == msgs.size());
-        assert(pending_ids.size() == msgs.size());
-        for (std::size_t i = 0; i < msgs.size(); ++i)
-            msgs[i].id = std::move(ids[i]);
-
-        // 2) Persistence gate: publish to the sync service before broadcasting.
-        // This avoids broadcasting messages that cannot be enqueued for durability.
-        if (auto err = persist_messages_via_http(ws.get_executor(), evt.roomId, msgs, pending_ids, st.redis(), yield);
-            err.ec)
+        // Required: publish to sync service (MQ gateway). Only broadcast if this succeeds.
+        if (auto err = publish_messages_via_http_required(ws.get_executor(), evt.roomId, msgs, yield); err.ec)
         {
+            log_error(err, "persist http");
             return err;
         }
 
@@ -238,7 +338,7 @@ struct event_handler_visitor
     error_with_message operator()(chat::request_room_history_event& evt) const
     {
         // Get room history
-        room_history_service svc(st.redis(), st.mysql(), st.mongodb());
+        room_history_service svc(st.redis(), st.mysql());
         auto history = svc.get_room_history(evt.roomId, yield);
         if (history.has_error())
             return std::move(history).error();
@@ -302,18 +402,28 @@ struct event_handler_visitor
        auto query = msgs[0].content;
        std::shared_ptr<websocket> ws_prt(&ws,[](websocket*){}); // 只是单纯使用引用，不释放真正的内存
        std::string session_id = evt.sessionId;
+       const auto user_id = static_cast<std::uint32_t>(current_user.id);
+       std::uint32_t session_id_num = 0;
+       try
+       {
+           session_id_num = static_cast<std::uint32_t>(std::stoul(session_id));
+       }
+       catch (...)
+       {
+           session_id_num = 0;
+       }
        //websocket& socket    = ws; 
-       boost::asio::co_spawn(ws.get_executor(), [ws_prt,query, session_id]()-> boost::asio::awaitable<void>
+       boost::asio::co_spawn(ws.get_executor(), [ws_prt, query, session_id, user_id, session_id_num]()-> boost::asio::awaitable<void>
        {
 
 
-          rpc::RpcClient rpc_client(ws_prt->get_executor());
-          co_await rpc_client.SetInitInfo(1,1,"sk-91d3a22bf7824e4dbc69a8383cd5cebb");
-          auto result = co_await rpc_client.Query(query);
-           if (result.has_error()){
-              std::cerr << "错误 !" << std::endl;
-              co_return;
-           }
+	          static constexpr const char* k_ai_api_key = "sk-c5611c6c9cac4d359e857ce63ae5a274";
+	          rpc::RpcClient rpc_client_with_token(ws_prt->get_executor(), std::string(k_ai_api_key));
+	          auto result = co_await rpc_client_with_token.Query(query);
+	           if (result.has_error()){
+	              std::cerr << "错误 !" << std::endl;
+	              co_return;
+	           }
           static const user k_root_user{0, " 陆零妖哔"};
           message msg{
               "",                      // 空 ID（可选，如果 Redis 分配就留空）
