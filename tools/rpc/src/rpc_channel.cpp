@@ -25,7 +25,7 @@ class TimeoutGuard{
      
 public:
     TimeoutGuard(boost::asio::steady_timer& timer, boost::asio::ip::tcp::socket& socket,
-                 std::chrono::steady_clock::duration timeout = std::chrono::seconds(10)) : timer_(timer), cancelled_(false)
+                 std::chrono::steady_clock::duration timeout = std::chrono::seconds(20)) : timer_(timer), cancelled_(false)
                  {
                     timer_.expires_after(timeout);
                     co_spawn(timer_.get_executor(), [&]() -> boost::asio::awaitable<void> {
@@ -57,7 +57,9 @@ private:
 
 class RpcChannelImp : public RpcChannel{
  public:
-  RpcChannelImp(std::string server_name, boost::asio::any_io_executor ex) : server_name_(server_name), ex_(ex), socket_(ex), timer_(ex) {
+  RpcChannelImp(std::string server_name, boost::asio::any_io_executor ex)
+      : server_name_(std::move(server_name)), ex_(ex), socket_(ex), timer_(ex)
+  {
   }
   ~RpcChannelImp () override{
 #ifdef DEBUG_INFO  
@@ -117,6 +119,8 @@ class RpcChannelImp : public RpcChannel{
                             },
                             boost::asio::detached);
    }
+
+  void SetHashKey(std::string hash_key) final override { hash_key_ = std::move(hash_key); }
  private:
   /* 
     静态回调函数
@@ -158,7 +162,11 @@ class RpcChannelImp : public RpcChannel{
     */
     ZkClient cli;
     cli.Start();
-    std::string server_addr_ = cli.GetData(("/"+server_name_).c_str(), zk_watcher, this);
+    std::string server_addr_;
+    if (!hash_key_.empty())
+      server_addr_ = cli.GetData(("/"+server_name_).c_str(), hash_key_, zk_watcher, this);
+    else
+      server_addr_ = cli.GetData(("/"+server_name_).c_str(), zk_watcher, this);
     //std::string server_addr_ = "192.168.1.100:8000";
 
     size_t split_pos = server_addr_.find(":");
@@ -270,6 +278,7 @@ class RpcChannelImp : public RpcChannel{
   }
 
   std::string server_name_;
+  std::string hash_key_;
   boost::asio::any_io_executor ex_;
   boost::asio::ip::tcp::socket socket_;
   boost::asio::steady_timer timer_;

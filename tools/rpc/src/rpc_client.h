@@ -25,6 +25,7 @@ class RpcClient{
 public:
   RpcClient(boost::asio::any_io_executor ex);
   RpcClient(boost::asio::any_io_executor ex, std::string token);
+  RpcClient(boost::asio::any_io_executor ex, std::string token, std::string hash_key);
   ~RpcClient();
 
   // token is provided at construction time (e.g. api_key).
@@ -35,6 +36,7 @@ private:
   std::shared_ptr<RpcChannel> channel_;
   std::shared_ptr<AiServer_Stub> ai_server_stub_;
   std::string token_;  
+  std::string hash_key_;
   bool started_{false};
 };
 

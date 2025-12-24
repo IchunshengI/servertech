@@ -1,11 +1,21 @@
 #include <semaphore.h>
 #include <zookeeper/zookeeper.h>
+#include <cstdlib>
 #include "zookeeper_op.h"
-#include "config/config.h"
 #include "log/logger_wrapper.h"
 #include "until/hash_ring.hpp"
 namespace rpc {
 using chat::LOG;
+
+namespace {
+
+static std::string getenv_or(const char* key, const char* default_value)
+{
+  const char* v = std::getenv(key);
+  return (v && *v) ? std::string(v) : std::string(default_value);
+}
+
+} // namespace
 
 
 /* zkserver给zkclient的通知接收 */
@@ -35,9 +45,11 @@ else if (state == ZOO_EXPIRED_SESSION_STATE){
 /* 连接成功的标志 */
 void ZkClient::Start()
 {
-  std::string host = chat::Config::Instance().Load("zookeeperIp");
-  std::string port = chat::Config::Instance().Load("zookeeperPort");
-  std::string connstr = host + ":" + port;
+  // In docker-compose, ZooKeeper is reachable via container DNS name.
+  // Override with env vars if needed.
+  const std::string host = getenv_or("ZOOKEEPER_HOST", "zookeeper-servertech");
+  const std::string port = getenv_or("ZOOKEEPER_PORT", "2181");
+  const std::string connstr = host + ":" + port;
 
   zhandle_ = zookeeper_init(connstr.c_str(), ZkClient::server_watcher, 
                             30000, nullptr, this, 0);

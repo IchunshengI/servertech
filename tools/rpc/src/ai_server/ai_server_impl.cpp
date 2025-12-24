@@ -70,7 +70,7 @@ void AiServerImpl::Query(::google::protobuf::RpcController* controller,
 	    [=,this]() -> boost::asio::awaitable<void> {
 
 	      auto query = std::make_shared<std::string>(request->query_message());
-	      const std::string api_key = request->token();
+	      std::string api_key = request->token();
 
     //   boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
     //   timer.expires_after(std::chrono::seconds(10));

@@ -19,6 +19,14 @@ namespace rpc
 
 using chat::LOG;
 
+
+static std::string getenv_or(std::string_view key, std::string_view default_value)
+{
+    const char* value = std::getenv(std::string(key).c_str());
+    return value ? std::string(value) : std::string(default_value);
+}
+
+
 class RpcServerImpl final : public RpcServer
 {
  public:
@@ -64,8 +72,10 @@ class RpcServerImpl final : public RpcServer
 		boost::asio::ip::tcp::acceptor acceptor(co_await boost::asio::this_coro::executor, ep);
     
 
-    std::string rpcIp = chat::Config::Instance().Load("rpcserverIp");
-    std::string rpcPort = (chat::Config::Instance().Load("rpcserverPort"));
+    // std::string rpcIp = chat::Config::Instance().Load("rpcserverIp");
+    // std::string rpcPort = (chat::Config::Instance().Load("rpcserverPort"));
+    std::string rpcIp = getenv_or("RPCSERVER_HOST", "web-back-gpp");
+    std::string rpcPort = getenv_or("RPCSERVER_HOST_POST", "8000");
 
     /* 注册zookeeper服务 */
     ZkClient zkCli;

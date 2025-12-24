@@ -141,14 +141,14 @@ using channel_t = boost::asio::experimental::channel<void(boost::system::error_c
 int main(){
 
   boost::asio::io_context iox;
-  rpc::RpcClient rpc_client(iox.get_executor(), "sk-91d3a22bf7824e4dbc69a8383cd5cebb");
+  rpc::RpcClient rpc_client(iox.get_executor(), "sk-c5611c6c9cac4d359e857ce63ae5a274", "test-hash-key");
   chat::InitLogger(iox.get_executor());
-  chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
+  //chat::Config::Instance().LoadConfigFile("/home/tlx/project/servertech-chat/tools/rpc/test/doc/zoo.cfg");
 
   boost::asio::co_spawn(iox,
 	    [&]() -> boost::asio::awaitable<void> {
 	        
-	       auto result = co_await rpc_client.Query("rpc是什么？");
+	       auto result = co_await rpc_client.Query("你是谁");
 	       if (result.has_error()){
 	          std::cerr << "错误 !" << std::endl;
 	       }else

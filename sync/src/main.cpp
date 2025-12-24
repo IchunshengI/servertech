@@ -294,7 +294,6 @@ public:
 
                 // After MongoDB insert succeeds, write to Redis cache/history (best-effort but retried via MQ).
                 Json::Value payload;
-                payload["uuid"] = uuid;
                 // Preserve the externally-visible message id, even if Redis stream ID is auto-generated.
                 payload["id"] = uuid;
                 payload["content"] = content;

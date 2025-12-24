@@ -16,6 +16,9 @@ class RpcChannel : public google::protobuf::RpcChannel{
  public:
   RpcChannel() {};
   virtual ~RpcChannel() = default;
+  // Used by ZooKeeper discovery to select an instance via consistent hashing.
+  // Leave empty to use the non-hash selection.
+  virtual void SetHashKey(std::string hash_key) = 0;
   virtual void CallMethod(const ::google::protobuf::MethodDescriptor* method,
                           google::protobuf::RpcController* controller,
                           const google::protobuf::Message* request,

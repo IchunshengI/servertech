@@ -19,6 +19,15 @@ RpcClient::RpcClient(boost::asio::any_io_executor ex, std::string token) : ex_(e
   ai_server_stub_ = std::make_shared<AiServer_Stub>(channel_.get());
 }
 
+RpcClient::RpcClient(boost::asio::any_io_executor ex, std::string token, std::string hash_key)
+    : ex_(ex), token_(std::move(token)), hash_key_(std::move(hash_key))
+{
+  channel_ = rpc::create_rpc_channel("AiServer", ex_);
+  channel_->SetHashKey(hash_key_);
+  controller_ = std::make_shared<RpcController>();
+  ai_server_stub_ = std::make_shared<AiServer_Stub>(channel_.get());
+}
+
 RpcClient::~RpcClient()
 {
 
@@ -39,6 +48,8 @@ awaitable<result_with_message<std::string>> RpcClient::Query(std::string query)
   auto signal = std::make_shared<chat::SimpleSignal>(ex_);
   if (!started_)
   {
+    if (!hash_key_.empty())
+      channel_->SetHashKey(hash_key_);
     auto error = co_await channel_->Start();
     if(error.ec){
       co_return rpc::error_with_message{rpc::errc::rpc_error, error.msg};

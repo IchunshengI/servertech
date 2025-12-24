@@ -14,6 +14,7 @@
 #include <boost/json/value_to.hpp>
 #include <boost/redis/resp3/type.hpp>
 
+#include <limits>
 #include <optional>
 #include <string>
 
@@ -39,6 +40,61 @@ struct redis_wire_message
 BOOST_DESCRIBE_STRUCT(redis_wire_message, (), (id, content, timestamp, user_id))
 
 }  // namespace
+
+static result<redis_wire_message> parse_wire_message(const boost::json::value& jv)
+{
+    // Be tolerant to extra fields (e.g. "uuid") written by other components.
+    // Required: content (string), timestamp (int64), user_id (int64). Optional: id (string).
+    const auto* obj = jv.if_object();
+    if (!obj)
+        CHAT_RETURN_ERROR(errc::redis_parse_error)
+
+    redis_wire_message out{};
+
+    if (auto it = obj->find("id"); it != obj->end())
+    {
+        if (!it->value().is_string())
+            CHAT_RETURN_ERROR(errc::redis_parse_error)
+        out.id = it->value().as_string().c_str();
+    }
+
+    {
+        auto it = obj->find("content");
+        if (it == obj->end() || !it->value().is_string())
+            CHAT_RETURN_ERROR(errc::redis_parse_error)
+        out.content = it->value().as_string().c_str();
+    }
+
+    auto parse_i64 = [](const boost::json::value& v, std::int64_t& dst) -> bool {
+        if (v.is_int64())
+        {
+            dst = v.as_int64();
+            return true;
+        }
+        if (v.is_uint64())
+        {
+            auto u = v.as_uint64();
+            if (u > static_cast<std::uint64_t>((std::numeric_limits<std::int64_t>::max)()))
+                return false;
+            dst = static_cast<std::int64_t>(u);
+            return true;
+        }
+        return false;
+    };
+
+    {
+        auto it = obj->find("timestamp");
+        if (it == obj->end() || !parse_i64(it->value(), out.timestamp))
+            CHAT_RETURN_ERROR(errc::redis_parse_error)
+    }
+    {
+        auto it = obj->find("user_id");
+        if (it == obj->end() || !parse_i64(it->value(), out.user_id))
+            CHAT_RETURN_ERROR(errc::redis_parse_error)
+    }
+
+    return out;
+}
 
 static message to_message(const redis_wire_message& from, std::string id)
 {
@@ -161,7 +217,7 @@ result<std::vector<message_batch>> chat::parse_room_history_batch(node_span node
             auto jv = boost::json::parse(node.value, ec);
             if (ec)
                 CHAT_RETURN_ERROR(ec)
-            auto msg = boost::json::try_value_to<redis_wire_message>(jv);
+            auto msg = parse_wire_message(jv);
             if (msg.has_error())
                 CHAT_RETURN_ERROR(msg.error())
             res.back().messages.push_back(to_message(msg.value(), *data.id));

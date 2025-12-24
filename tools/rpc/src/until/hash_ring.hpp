@@ -21,6 +21,7 @@ class ConsistentHashRing{
             for(const auto& node : nodes)
             {
                 // 添加节点
+                AddNode(node);
             }
         }
 

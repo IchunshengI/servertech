@@ -12,9 +12,11 @@
 #include <memory>
 
 #include "services/cookie_auth_service.hpp"
+#include "services/mongodb_client.hpp"
 #include "services/mysql_client.hpp"
 #include "services/pubsub_service.hpp"
 #include "services/redis_client.hpp"
+#include "services/redis_warmup_service.hpp"
 
 using namespace chat;
 
@@ -23,8 +25,10 @@ shared_state::shared_state(std::string doc_root, boost::asio::any_io_executor ex
           std::move(doc_root),
           create_redis_client(ex), /* redis对象 */
           create_mysql_client(ex), /* mysql对象 */
+          create_mongodb_client(ex), /* mongodb对象 */
           std::make_unique<cookie_auth_service>(redis(), mysql()), /* 这个是用来做cookie授权验证的 */
           create_pubsub_service(ex), /* 这个的功能目前还不清楚 */
+          std::make_unique<redis_warmup_service>(ex, redis(), mongodb()),
       }
 {
 }
@@ -38,3 +42,15 @@ shared_state& shared_state::operator=(shared_state&& rhs) noexcept
 }
 
 shared_state::~shared_state() {}
+
+void shared_state::start_background_tasks()
+{
+    if (impl_.warmup_)
+        impl_.warmup_->start();
+}
+
+void shared_state::stop_background_tasks()
+{
+    if (impl_.warmup_)
+        impl_.warmup_->stop();
+}

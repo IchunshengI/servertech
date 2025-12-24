@@ -40,6 +40,7 @@
 #include "api/api_types.hpp"
 #include "business_types.hpp"
 #include "error.hpp"
+#include "rooms.hpp"
 #include "services/cookie_auth_service.hpp"
 #include "services/persist_http_publisher.hpp"
 #include "services/pubsub_service.hpp"
@@ -248,17 +249,6 @@ static error_with_message publish_messages_via_http_required(
 // };
 
 
-// Rooms are static for now.
-static constexpr std::array<std::string_view, 2> room_ids{
-    "test_channe1",
-    "test_channe2",
-};
-
-static constexpr std::array<std::string_view, room_ids.size()> room_names{
-    "内测频道1",
-    "内测频道2",
-};
-
 // An owning type containing data for the hello event.
 struct hello_data
 {
@@ -418,7 +408,8 @@ struct event_handler_visitor
 
 
 	          static constexpr const char* k_ai_api_key = "sk-c5611c6c9cac4d359e857ce63ae5a274";
-	          rpc::RpcClient rpc_client_with_token(ws_prt->get_executor(), std::string(k_ai_api_key));
+	          const std::string hash_key = std::to_string(user_id) + ":" + std::to_string(session_id_num);
+	          rpc::RpcClient rpc_client_with_token(ws_prt->get_executor(), std::string(k_ai_api_key), hash_key);
 	          auto result = co_await rpc_client_with_token.Query(query);
 	           if (result.has_error()){
 	              std::cerr << "错误 !" << std::endl;
